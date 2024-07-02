@@ -1,10 +1,10 @@
 # web-monitor
 
-Web Monitor is a clojure-based tool designed to scrape websites and notify users if changes occur in elements specified through their html tags. It notifies the user of the specific changes being detected via rss or the matrix protocol (more messengers will hopefully be available in the future).
+Web-monitor is a clojure-based tool designed to scrape websites and notify users if changes occur in elements specified through their html tags. It notifies the user of the specific changes being detected via rss or the matrix protocol (more messengers will hopefully be available in the future).
 
 ## Installation
 
-* It requires leiningen to run, leiningen will automatically handle all libraries used on startup. Leiningen requires the java-jdk.
+* It requires leiningen to run, leiningen will automatically install all libraries neededwhen starting the program. Leiningen requires the java-jdk.
 
 * It also requires firefox if you want to scrape websites with javascript loading enabled.
 
@@ -51,7 +51,7 @@ Note that the websites used in the config example can obviously change their tag
 
 ### Features
 
-* Test using Xpath alongside opening tags for more robustness and specificity. Xpath alone will never be sufficient for the functionality web-monitor aims to provide.
+* Test using Xpath alongside opening tags for more robustness and specificity. Xpath alone is not sufficient for the functionality web-monitor aims to provide.
 
 * Add more messengers like email, telegram, etc..
 
