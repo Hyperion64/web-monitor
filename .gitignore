@@ -1,0 +1,29 @@
+/target
+/classes
+/checkouts
+profiles.clj
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
+/.prepl-port
+.hgignore
+.hg/
+
+
+# Ignore build artifacts
+/target
+
+# Ignore Git
+/.git
+
+# Ignore IDE/editor configuration files
+/.calva
+/.clj-kondo
+/.lsp
+/.vscode
+
+# Ignore Leiningen REPL history
+/.lein-repl-history
