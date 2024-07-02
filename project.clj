@@ -18,10 +18,8 @@
                  [org.clj-commons/hickory "0.7.3"]
                  [ring/ring-core "1.11.0"]
                  [ring/ring-jetty-adapter "1.11.0"]
-                  ;[org.clojure/core.async "1.6.681"] 
                  [sqlitejdbc "0.5.6"]
                  
                  [org.seleniumhq.selenium/selenium-java "4.0.0"]
-                 [org.seleniumhq.selenium/selenium-firefox-driver "4.0.0"]
-                 ] 
+                 [org.seleniumhq.selenium/selenium-firefox-driver "4.0.0"]] 
   :repl-options {:init-ns webMonitor.repl-run})

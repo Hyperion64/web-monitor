@@ -32,7 +32,7 @@ Web Monitor is a clojure-based tool designed to scrape websites and notify users
   - messenger: only one at a time is supported and only "matrix" and "rss".    
 
 ### Receiving messages with rss:
-Just supply the link: http://localhost:8080/Example-monitor-name.xml to your rss reader with the localhost number being the port number specified in the settings.
+Just provide the link: http://localhost:8080/Example-monitor-name.xml to your rss reader with the localhost number being the port number specified in the settings.
 
 ### Running it:
 Do `lein run` in the web-monitor directory and it will start. Obviously consider putting that in autostart.   
@@ -51,7 +51,7 @@ Note that the websites used in the config example can obviously change their tag
 
 ### Features
 
-* Test using Xpath alongside opening tags for more robustness and specificty. Xpath alone will never be sufficient for the functionality web-monitor aims to provide.
+* Test using Xpath alongside opening tags for more robustness and specificity. Xpath alone will never be sufficient for the functionality web-monitor aims to provide.
 
 * Add more messengers like email, telegram, etc..
 
