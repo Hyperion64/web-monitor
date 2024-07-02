@@ -1,6 +1,6 @@
 # web-monitor
 
-Web-monitor is a clojure-based tool designed to scrape websites and notify users if changes occur in elements specified through their html tags. Currently rss and the matrix protocol are available (more messengers will hopefully be available in the future).
+Web-monitor is a clojure-based tool designed to scrape websites and notify users if new elements specified through their html tags occur. It will extract all text found inside each element which starts with the specified opening tag and send notifications of the new text that has been found. This is useful if you want to know when a new article, video, album or whatever else is on the specific website has been published as each element usually has the same or a very similar html structure. Currently rss and the matrix protocol are available (more messengers will hopefully be added in the future).
 
 ## Installation
 
