@@ -1,34 +1,86 @@
 {
     "settings": {
-        "frequency_minutes": 5,
-        "rss_port": 8080,
-        "javascript": "manual",
-        "js_load_time_seconds": 2 
+        "frequency-minutes": 15,
+        "rss-port": 8080,
+        "javascript": true,
+        "js-load-time-seconds": 6,
+        "messengers": [
+            "rss",
+            "print",
+            "notify-send"
+        ],
+        "report-first-found": [
+            "print"
+        ]
     },
-    "messengers": {
+    "account-details": {
         "matrix": {
             "homeserver": "https://matrix.org",
-            "username": "@example_name:matrix.org",
-            "password": "example_password",
-            "room_id": "!example_id:matrix.org"
+            "username": "@:matrix.org",
+            "password": "",
+            "room-id": "!:matrix.org"
         }
     },
     "monitors": [
         {
-            "name"          : "Clojure-News",
-            "url"           : "https://clojure.org/news/news",
-            "element"       : "<a class=\"w-nav-link clj-section-nav-item-link\">",
-            "inner_element" : "",
-            "javascript"    : false,
-            "messenger"     : "rss"
+            "name": "Thinkpad_t480",
+            "url": "https://www.kleinanzeigen.de/s-thinkpad-t480/k0",
+            "url-range": [
+                "https://www.kleinanzeigen.de/s-seite:",
+                "/thinkpad-t480/k0",
+                2,
+                0,
+                10
+            ],
+            "css-selector": {
+                "tag": "div",
+                "classes": "aditem-main"
+            },
+            "text-css-selectors": [
+                {
+                    "tag": "h2",
+                    "classes": "text-module-begin"
+                },
+                {
+                    "tag": "p",
+                    "classes": "aditem-main--middle--price-shipping--price"
+                }
+            ],
+            "href-css-selectors": {
+                "tag": "h2",
+                "classes": "text-module-begin"
+            },
+            "active": true
         },
         {
-            "name"          : "bytebytego",
-            "url"           : "https://blog.bytebytego.com/archive",
-            "element"       : "<a class=\"pencraft pc-reset _color-pub-primary-text_1ip2z_204 _font-pub-headings_1ip2z_140 _clamp_1ip2z_259 _clamp-3_1ip2z_271 _reset_1ip2z_1\">",
-            "inner_element" : "",
-            "javascript"    : false,
-            "messenger"     : "rss"
+            "name": "Autechre-releases",
+            "url": "https://autechre.warp.net/releases",
+            "css-selector": {
+                "tag": "div",
+                "classes": "product-tile"
+            },
+            "filters": [
+                {
+                    "operator": "!contains",
+                    "filter-value": "AE_",
+                    "text-css-selector": {
+                        "tag": "dd",
+                        "classes": "release-title"
+                    }
+                }
+            ],
+            "text-css-selectors": {
+                "tag": "dd",
+                "classes": "release-title"
+            },
+            "href-css-selectors": {
+                "tag": "a",
+                "classes": [
+                    "main-product-image",
+                    "artwork"
+                ]
+            },
+            "active": true
         }
     ]
 }

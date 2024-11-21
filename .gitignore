@@ -1,3 +1,4 @@
+/dev-resources
 /target
 /classes
 /checkouts
@@ -11,7 +12,7 @@ pom.xml.asc
 /.prepl-port
 .hgignore
 .hg/
-
+.lein-failures
 
 # Ignore build artifacts
 /target
@@ -20,10 +21,11 @@ pom.xml.asc
 /.git
 
 # Ignore IDE/editor configuration files
-/.calva
 /.clj-kondo
 /.lsp
-/.vscode
 
 # Ignore Leiningen REPL history
 /.lein-repl-history
+
+# Ignore config.json
+#/config.json
