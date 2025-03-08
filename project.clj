@@ -10,6 +10,7 @@
                  [org.clojure/data.xml "0.0.8"]
                  [clj-http "3.13.0"]
                  [clojure.java-time "1.4.3"]
+                 [clj-time "0.15.2"]
                  [compojure "1.7.1"]
                  [com.github.seancorfield/next.jdbc "1.3.955"]
                  [buddy/buddy-core "1.12.0-430"]

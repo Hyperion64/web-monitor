@@ -16,7 +16,7 @@
    db-spec
    ["CREATE TABLE IF NOT EXISTS web_elements
      (monitor_name TEXT, text TEXT, hrefs TEXT, first_seen DATE,
-     not_seen_since DATE,
+     not_seen_since DATE, filtered_out INTEGER,
      PRIMARY KEY (monitor_name, text, hrefs)
      FOREIGN KEY (monitor_name) REFERENCES web_monitors (name))"])
   (jdbc/execute!
@@ -34,10 +34,11 @@
 (defn insert-web-element [element]
   (sql/insert!
    db-spec :web_elements
-   {:monitor_name (:monitor-name  element)
-    :text         (:text          element)
-    :hrefs        (:hrefs         element)
-    :first_seen   (:datetime      element)}))
+   {:monitor_name (:monitor-name element)
+    :text         (:text         element)
+    :hrefs        (:hrefs        element)
+    :first_seen   (:datetime     element)
+    :filtered_out (:filtered-out element)}))
 
 (defn get-all-web-monitors []
   (sql/query
@@ -56,7 +57,7 @@
     :content_selectors_hash (:content_selectors_hash monitor-update)}
    {:name                   (:name                   monitor-update)}))
 
-(defn update-web-element [updated-element]
+(defn update-not-seen-since [updated-element]
   (sql/update!
    db-spec :web_elements
    {:not_seen_since (:not-seen-since updated-element)}
