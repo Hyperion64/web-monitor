@@ -1,14 +1,16 @@
 # web-monitor
 
-Web-monitor is a Clojure-based tool that scrapes websites and notifies the user when new elements are detected with the use of CSS selectors. It will extract all text and links found inside the specified elements. This can be useful if you want to know when a new article, video, album, etc. has been published on a website. It is also possible to filter the content for certain keywords, number values and length. Web-monitor will store the found content in a SQLite database which can be accessed while web-monitor is running for integration with other applications. Currently rss and the matrix protocol are available by default but you can also specify a custom script that web-monitor will pass the content to or get print output in JSON format for piping it into other programs. Before using web-monitor for rss, check out the Awesome-rss browser extension. A lot of websites have rss feeds that you will miss otherwise.
+web-monitor is a universal web-scraper written in Clojure with a notification system attached. It is mostly meant to be applied to reoccurring elements with the same css to get notifications if a new article, video, product, etc. entry has been published. But it can also be used to monitor changes of one specific element of a website. Of course you can filter elements with different criteria which even involves accessing the page an element is linking to and applying the filter to elements there.
+
+Receive said notifications via matrix, rss, std output, pipe it into your own script or simply read out the SQLite database.
 
 ## Installation
 
 * Only works on Linux.
 
-* The program is available as a jar in the web-monitor.tar file which also contains all the other relevant files to run it. You will need Java 11 to run that jar file. Learn how to start it under **How to start it**.
+* The program is available as a jar in the web-monitor.tar file that you can find under releases, which also contains all the other relevant files to run it. This file can be found under "Releases". You will need Java 11 to run that jar file. Learn how to start it under **How to start it**.
 
-* Or just clone the repo and us leiningen. But then it will be completely compiled everytime and there is no reason to get leiningen for it unless you want to modify the code.
+* Or just clone the repo and use leiningen. But then it will be completely compiled everytime and there is no reason to get leiningen for it unless you want to modify the code.
 
 * To scrape websites with JavaScript loading enabled, web-monitor also requires Firefox and a compatible Geckodriver version. Ensure Geckodriver is executable in your system path.
 
@@ -81,18 +83,19 @@ The config.json file contains the following 3 JSON objects:
     Fill it with the selector of the html elements which contain the content you are interested in. If there are multiple articles on a website, define the CSS selector with the attributes of the outermost element of each article, it will then get all articles which have this structure. "classes" and "ids" can be defined as strings or arrays.
   - "inner-css-selector": if the individual elements don't have distinct attributes but are in a table and have tags like &lt;li&gt; each, put the attributes for the table in "css-selector" and (in this case) "tag": "li" in "inner-css-selector". Input is specified in the same format as "css-selector".
   - "filters": a JSON object with elements:
-    - "operator": can be defined as "contains", "!contains", "=", "!=", "<=", ">=", "<", ">".
+    - "operator": can be defined as "contains", "!contains" ,"=", "!=", "<=", ">=", "<", ">" where "contains" and "!contains" are only available for strings but the other operations are available for every type including dates.
     - "filter-value": can be a number or string.
-    - "number-format": can be specified as "eur" or "eng" so the number format can be parsed properly (as , and . mean different things in both), "eng" is the default.
-    - "text-css-selector" to specify where the text in the elmement is located that should be used to apply the filter to in order to decide if the entire html-elemnt should be selected. The input is defined in the same format as "css-selector". "text-css-selector" can be left out to apply the filter to the entire element.
+    - "format": if left out it will be string or number depending on the value. If a different number format is required, it can be specified with "dsxtsy" where x is some symbol for the decimal seperator and y is some symbol for the thousand seperator, for example "ds,ts." would be the german way to write numbers. It can also be a date format like for example "yyyy-MM-dd" which will be extracted and parsed from the text (so the element can contain other text which will be ignored). Take a look at joda-time which web-monitor is using to see which formats are available and how to define them. The only thing which it can not parse are time-zones. At least in theory as this needs a lot more testing.
+    - "text-css-selector": to specify where the text in the elmement is located that should be used to apply the filter to in order to decide if the entire html-elemnt should be selected. The input is defined in the same format as "css-selector". "text-css-selector" can be left out to apply the filter to the entire element.
+    - "href-filters": will filter based on the website linked to via the web element. To use this, make sure that only one href-link is found by restricting the search with a href-css-selector. Specify on which part of the website the filter should be applied to with a css-selector object as used to define the monitors and then add the usual filter parameter objects. You can also recursively define yet another href-filter within this filter and so on.
   - "text-css-selector": can optionally be defined to filter which part of the text of the element should be displayed in the notifications. Input can be JSON object or array of JSON objects with format specified for "css-selector".
   - "href-css-selector": can optionally be defined to filter which links of the element should be displayed in the notifications. Input can be JSON object or array of JSON objects with format specified for "css-selector".
   - "active": bool which defaults to true. Can be useful if you want to keep the monitor for now but do not want to have it running.
 
 ### How to start it:
-Start it with the included start-web-monitor.sh script or execute `lein run` if you use leiningen. The program does use the path relative to the user to access the needed files, it can be run from anywhere. This goes for both the jar file and the leininge project.
+Start it with the included start-web-monitor.sh script or execute `lein run` if you use leiningen. The program does not use the path relative to the user to access the needed files, it can be run from anywhere. This goes for both the jar file and the leininge project.
 Web-monitor will parse the config before every scraping so it will automatically load updated settings without a restart needed, unless you want to modify the rss port number.
 
 ### Bugs
 
-* When scraping with js loading enabled, there are some websites where the js code crashes. It seems like their JS relies on metadata that my scraper is not providing (yet).
+* When scraping with js loading enabled, there are some websites where the js code crashes. It seems like their JS relies on metadata that web-monitor is not providing (yet).

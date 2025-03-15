@@ -149,36 +149,56 @@
                (assoc % :not-seen-since (:not_seen_since %))
                :not_seen_since)
              web-elements)
+        converted-web-elements-without-filtered
+        (filter #(= (:filtered %) 0) converted-web-elements)
         {existing-web-elements true
          removed-web-elements false}
-        (group-by #(nil? (:not-seen-since %)) converted-web-elements)
-        all-web-contents
-        (concat existing-web-elements removed-web-elements)
+        (group-by #(nil? (:not-seen-since %))
+                  converted-web-elements-without-filtered)
         select-text-hrefs
         (fn [web-elements]
           (map #(select-keys % [:text :hrefs]) web-elements))]
-    (map select-text-hrefs [all-web-contents
+    (map select-text-hrefs [converted-web-elements
                             existing-web-elements
                             removed-web-elements])))
 
 (defn save-web-elements [web-elements]
-  (let [elements-type      (:type     (first web-elements))
-        elements-datetime  (:datetime (first web-elements))
-        not-seen-since (case elements-type
-                         "removed"      elements-datetime
-                         "rediscovered" nil
-                         nil)
+  (let [elements-type
+        (:type (first web-elements))
+        elements-datetime
+        (:datetime (first web-elements))
+        not-seen-since
+        (case elements-type
+          "removed"      elements-datetime
+          "rediscovered" nil
+          nil)
+        filtered-by-href-filter
+        (case elements-type
+          "new" 0
+          "filtered-out" 1
+          nil)
         make-new-db-web-element
         (fn [web-element]
-          (select-keys web-element [:monitor-name :text :hrefs :datetime]))
+          (assoc
+           (select-keys web-element [:monitor-name :text :hrefs :datetime])
+           :filtered-out filtered-by-href-filter))
         make-update-db-web-element
         (fn [web-element]
-          (assoc (select-keys web-element [:monitor-name :text :herfs])
-                 :not-seen-since not-seen-since))]
-    (cond
-      (= elements-type "new")
-      (doseq [web-element web-elements]
-        (ad/insert-web-element (make-new-db-web-element web-element)))
-      (contains? #{"removed" "rediscovered"} elements-type)
-      (doseq [web-element web-elements]
-        (ad/update-web-element (make-update-db-web-element web-element))))))
+          (assoc
+           (select-keys web-element [:monitor-name :text :hrefs])
+           :not-seen-since not-seen-since))
+        [db-function make-web-element-function]
+        (cond
+          (contains? #{"new" "filtered-out"} elements-type)
+          [ad/insert-web-element make-new-db-web-element]
+          (contains? #{"removed" "rediscovered"} elements-type)
+          [ad/update-not-seen-since make-update-db-web-element])]
+    #_(cond
+        (= elements-type "new")
+        (doseq [web-element web-elements]
+          (ad/insert-web-element (make-new-db-web-element web-element)))
+        (contains? #{"removed" "rediscovered"} elements-type)
+        (doseq [web-element web-elements]
+          (ad/update-not-seen-since (make-update-db-web-element web-element))))
+    (doseq [web-element web-elements]
+      (db-function (make-web-element-function web-element)))))

@@ -44,27 +44,28 @@
                (manage-iterate-monitoring-url-range)))))
 
 (defn- process-web-contents
-  [monitor account-details first-monitoring
-   new-web-contents removed-web-contents rediscovered-web-contents]
-  (letfn [(create-web-elements [web-contents type]
+  [monitor account-details first-monitoring all-web-contents]
+  (letfn [(create-web-elements [web-contents web-content-type]
             (map (fn [web-content]
                    {:monitor-name     (:name monitor)
                     :text             (:text web-content)
                     :hrefs            (:hrefs web-content)
                     :datetime         (sf/make-datetime)
                     :first-monitoring first-monitoring
-                    :type             type})
+                    :type             web-content-type})
                  web-contents))]
     (let [web-elements-list
-          (map #(apply create-web-elements %)
-               [[new-web-contents          "new"]
-                [removed-web-contents      "removed"]
-                [rediscovered-web-contents "rediscovered"]])]
+          (map (fn [type-key]
+                 (create-web-elements (type-key all-web-contents)
+                                      (name type-key)))
+               [:new :removed :rediscovered :filtered-out])]
       (doseq [web-elements web-elements-list]
         (when (not-empty web-elements)
           (adl/save-web-elements web-elements)
-          (sm/notify-user
-           (reverse web-elements) first-monitoring monitor account-details))))))
+          (when-not (= (:type (first web-elements)) :filtered-out)
+            (sm/notify-user
+             (reverse web-elements)
+             first-monitoring monitor account-details)))))))
 
 (defn organize-monitoring [config-monitors config-account-details]
   (doseq [monitor config-monitors]
@@ -75,16 +76,26 @@
            removed-web-contents-db]
           (adl/get-web-contents-db monitor)
           new-web-contents
-          (sf/ordered-complement extracted-web-contents
-                                 all-web-contents-db)
+          (sf/ordered-complement
+           extracted-web-contents all-web-contents-db)
           removed-web-contents
-          (sf/ordered-complement existing-web-contents-db
-                                 extracted-web-contents)
+          (sf/ordered-complement
+           existing-web-contents-db extracted-web-contents)
           rediscovered-web-contents
-          (sf/ordered-conjunction extracted-web-contents
-                                  removed-web-contents-db)
+          (sf/ordered-conjunction
+           extracted-web-contents removed-web-contents-db)
+          filtered-new-web-contents
+          (hp/perform-href-filtering
+           new-web-contents (assoc monitor :url (first (:url monitor))))
+          filtered-out-new-web-contents
+          (sf/ordered-complement
+           new-web-contents filtered-new-web-contents)
+          all-web-contents
+          {:new          filtered-new-web-contents
+           :removed      removed-web-contents
+           :rediscovered rediscovered-web-contents
+           :filtered-out filtered-out-new-web-contents}
           first-monitoring
           (empty? all-web-contents-db)]
       (process-web-contents
-       monitor config-account-details first-monitoring
-       new-web-contents removed-web-contents rediscovered-web-contents))))
+       monitor config-account-details first-monitoring all-web-contents))))

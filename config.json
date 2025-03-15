@@ -1,13 +1,14 @@
 {
     "settings": {
-        "frequency-minutes": 15,
+        "frequency": "15m 30s",
         "rss-port": 8080,
+        "browser": "chrome",
         "javascript": true,
         "js-load-time-seconds": 6,
         "messengers": [
             "rss",
-            "print",
-            "notify-send"
+            "notify-send",
+            "print"
         ],
         "report-first-found": [
             "print"
@@ -23,7 +24,7 @@
     },
     "monitors": [
         {
-            "name": "Thinkpad_t480",
+            "name": "Thinkpad_t4802",
             "url": "https://www.kleinanzeigen.de/s-thinkpad-t480/k0",
             "url-range": [
                 "https://www.kleinanzeigen.de/s-seite:",
@@ -32,6 +33,7 @@
                 0,
                 10
             ],
+            "url-range-frequency": 15,
             "css-selector": {
                 "tag": "div",
                 "classes": "aditem-main"
@@ -50,7 +52,76 @@
                 "tag": "h2",
                 "classes": "text-module-begin"
             },
-            "active": true
+            "active": false
+        },
+        {
+            "name": "Thinkpad_t480",
+            "url": "https://www.kleinanzeigen.de/s-thinkpad-t480/k0",
+            "css-selector": {
+                "tag": "div",
+                "classes": "aditem-main"
+            },
+            "filters": [
+                {
+                    "href-filters": [
+                        {
+                            "operator": "contains",
+                            "filter-value": "TOP",
+                            "css-selector": {
+                                "tag": "span",
+                                "classes": [
+                                    "userbadge-tag"
+                                ]
+                            }
+                        },
+                        {
+                            "operator": "!contains",
+                            "filter-value": "Nur Abholung",
+                            "css-selector": {
+                                "tag": "span",
+                                "classes": [
+                                    "boxedarticle--details--shipping"
+                                ]
+                            }
+                        },
+                        {
+                            "css-selector": {
+                                "tag": "span",
+                                "classes": [
+                                    "userprofile-vip"
+                                ]
+                            },
+                            "href-filters": [
+                                {
+                                    "operator": "!=",
+                                    "filter-value": "",
+                                    "css-selector": {
+                                        "tag": "h2",
+                                        "classes": [
+                                            "userprofile--name"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "text-css-selectors": [
+                {
+                    "tag": "h2",
+                    "classes": "text-module-begin"
+                },
+                {
+                    "tag": "p",
+                    "classes": "aditem-main--middle--price-shipping--price"
+                }
+            ],
+            "href-css-selectors": {
+                "tag": "h2",
+                "classes": "text-module-begin"
+            },
+            "active": false
         },
         {
             "name": "Autechre-releases",
@@ -59,6 +130,7 @@
                 "tag": "div",
                 "classes": "product-tile"
             },
+            "frequency": "1m",
             "filters": [
                 {
                     "operator": "!contains",
@@ -73,7 +145,7 @@
                 "tag": "dd",
                 "classes": "release-title"
             },
-            "href-css-selectors": {
+            "href-css-selectorsss": {
                 "tag": "a",
                 "classes": [
                     "main-product-image",
