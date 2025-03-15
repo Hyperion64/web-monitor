@@ -12,7 +12,7 @@ Receive said notifications via matrix, rss, std output, pipe it into your own sc
 
 * Or just clone the repo and use leiningen. But then it will be completely compiled everytime and there is no reason to get leiningen for it unless you want to modify the code.
 
-* To scrape websites with JavaScript loading enabled, web-monitor also requires Firefox and a compatible Geckodriver version. Ensure Geckodriver is executable in your system path.
+* To scrape websites with JavaScript loading enabled, web-monitor also requires Firefox and a compatible Geckodriver version or Chrome and a compatible Chromedriver version. Ensure Geckodriver or chromedriver are executable in your system path.
 
 ## Usage
 
@@ -30,9 +30,10 @@ Receive said notifications via matrix, rss, std output, pipe it into your own sc
 The config.json file contains the following 3 JSON objects:
 
 * **settings**
-  - "frequency-minutes": sets frequency of scraping.
+  - "frequency": string which sets frequency of scraping. You can use a number, followed by ms, s, m, h or d to specify how long. You can also put multiple which will then be added. Like lets say a valid input would be "12m 10s".
+  - "url-range-frequency": number which specifies how often the program will iterate over the url-range. 15 means it will iterate over the range every 15th time. See what a url-range is below.
   - "rss-port": sets port for rss feeds.
-  - "javascript": sets if javascript should be loaded when scraping. Note that loading the js is by far the most resource intensive part in this program and could slow down already very busy and slow computers significantly for high frequency scrapes. Also note the dependencies in **Installation**. Defaults to false.
+  - "browser": sets the browser used for scraping. "none" is the default. The other options are "firefox" and "chrome" if javascript should be loaded. Note that loading the js is by far the most resource intensive part in this program and could slow down already very busy and slow computers significantly for high frequency scrapes. Also note the dependencies in **Installation**.
   - "js-load-time-seconds": set how long the js has time to load for each scraping, defaults to 2.
   - "messengers":
     - "matrix"
