@@ -70,12 +70,10 @@ The config.json file contains the following 3 JSON objects:
   - "continuous": boolean which is false by default. Use it to define if the website should remain opened instead of being repeatedly opened and closed again. Great for high frequency scrapes. The frequency will still be the same as defined with the "frequency" parameter so make sure to adjust it appropriately for the monitor.
   - "url": url of website to scrape. Can also be an array of websites.
   - "url-file": filename of a txt file inside the folder resources/url_files which should contain urls separated by newlines.
-  - "url-range": array with 5 elements (of which only the first 2 are mandatory) in order: 
-    - first part of the url.
-    - second part of the url.
-    - the number you want to increment from, which is in between the two parts. Defaults to 1.
-    - the amount of tries it should make with a higher increment before giving up if no specified content is found, defaults to 5.
-    - max amount of websites it should succesfully scrape, defaults to infinity.
+  - "url-range": object with 3 elements. url-range can be used, if you want to iterate over multiple pages with each page having a incrementally higher number in the url:
+    - "url-parts": an array of 3 elements: first part of the url, second part of the url and first index to start.
+    - "tolerance": the amount of attempts it should make more before giving up after not finding anything. If no specified content is found, it defaults to 5.
+    - "max-scrapes": max amount of websites it should succesfully scrape, defaults to infinity.
     You don't need to specify url if you specify url-range and vice versa.
   - "css-selector": a JSON object with the keys: 
     - "tag": for example put "tag": "div" if the element is &lt;div&gt;.
