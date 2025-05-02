@@ -1,12 +1,12 @@
 (ns web-monitor.core
   (:gen-class)
   (:require [processing.manage-monitors :as mm]
-            [processing.parse-input :as pi]
-            [utils.shared-functions :as sf]
-            [db.access-db-logic     :as adl]
-            [notifications.rss-feed :as rf]
-            [clojure.data.json :as json]
-            [clojure.java.io :as io]))
+            [processing.parse-input     :as pi]
+            [utils.shared-functions     :as sf]
+            [db.access-db-logic         :as adl]
+            [notifications.rss-feed     :as rf]
+            [clojure.data.json          :as json]
+            [clojure.java.io            :as io]))
 
 (defn- time-adjust-config-monitors [clock-maps monitors]
   (let [get-names
@@ -72,7 +72,7 @@
     (with-open [reader (io/reader config-path)]
       (json/read reader :key-fn keyword))))
 
-(defn- loop-monitoring-process [previous-clock-maps]
+(defn- loop-monitoring-process [previous-clock-maps first-time]
   (let [config
         (get-config)
         config-settings
@@ -83,16 +83,22 @@
         (pi/format-config-monitors (:monitors config) config-settings)
         active-config-monitors
         (filter #(:active %) config-monitors)
-        [updated-clock-maps ready-monitors
-         wait-time]
+        {continuous-monitors true, regular-monitors false}
+        (group-by #(:continuous %) active-config-monitors)
+        [updated-clock-maps ready-regular-monitors wait-time]
         (time-adjust-config-monitors
-         previous-clock-maps active-config-monitors)]
-    (Thread/sleep wait-time)
+         previous-clock-maps (or regular-monitors []))]
     (adl/update-db-monitors config-monitors)
-    (mm/organize-monitoring ready-monitors config-account-details)
-    (recur updated-clock-maps)))
+    (when first-time
+      (mm/init-organize-continuous-monitoring
+       continuous-monitors config-account-details))
+    (Thread/sleep wait-time)
+    (mm/init-organize-regular-monitoring
+     ready-regular-monitors config-account-details)
+    (when-not regular-monitors (Thread/sleep (* 1000 60 10)))
+    (recur updated-clock-maps false)))
 
 (defn -main []
   (adl/create-db)
   (rf/start-rss-server (:settings (get-config)))
-  (loop-monitoring-process {}))
+  (loop-monitoring-process {} true))

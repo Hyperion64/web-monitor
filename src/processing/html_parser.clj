@@ -1,6 +1,7 @@
 (ns processing.html-parser
   (:require [web.scraper :as s]
             [utils.shared-functions :as sf]
+            [clojure.java.shell :refer [sh]]
             [clojure.string :as str]
             [clj-time.format :as f]
             [clj-time.core :as t]
@@ -224,34 +225,38 @@
         (select-filter-function web-string)
         false))))
 
-(defn- perform-filtering-core [html-contents selected-filters apply-filter]
+(defn- perform-filtering-core [html-contents selected-filters get-text]
   (letfn [(apply-all-filters [html-content]
-            (every? #(apply-filter html-content %) selected-filters))]
+            (every? #((:function %) (get-text html-content %))
+                    selected-filters))]
     (filter apply-all-filters html-contents)))
 
-(defn- perform-general-filtering [html-contents monitor]
-  (let [selected-filters
-        (filter
-         #(not (or (contains? % :text-css-selector)
-                   (contains? % :href-filters)))
-         (:filters monitor))
-        apply-filter
-        (fn [html-content selected-filter]
-          ((make-filter-function selected-filter)
-           (:text html-content)))]
-    (perform-filtering-core html-contents selected-filters apply-filter)))
+(defn- perform-general-filtering [html-contents filters]
+  (let [selected-filter-data
+        (filter #(= (:type %) "general") filters)
+        selected-filter-functions
+        (map (fn [filter-data-element]
+               {:function (make-filter-function filter-data-element)})
+             selected-filter-data)
+        get-text
+        (fn [html-content _]
+          (:text html-content))]
+    (perform-filtering-core html-contents selected-filter-functions get-text)))
 
 (defn- perform-selected-filtering [html-contents monitor]
   (let [css-selector-filters
-        (filter #(contains? % :text-css-selector) (:filters monitor))
-        selected-filters
+        (filter #(= (:type %) "select") (:filters monitor))
+        selected-filter-data
         (sf/map-maybe-collection
          (fn [css-selector-filter]
-           {:function
+           {:function-params
             (select-keys css-selector-filter [:operator :filter-value])
             :text-css-selector
             (:text-css-selector css-selector-filter)})
          css-selector-filters)
+        selected-filter-functions
+        (map #(assoc % :function (make-filter-function (:function-params %)))
+             selected-filter-data)
         get-text
         (fn [html-content selected-filter]
           (:text (first (perform-extraction
@@ -260,56 +265,9 @@
                           html-content)
                          (assoc monitor
                                 :text-css-selectors []
-                                :href-css-selectors [])))))
-        apply-filter
-        (fn [html-content selected-filter]
-          ((make-filter-function (:function selected-filter))
-           (get-text html-content selected-filter)))]
-    (perform-filtering-core html-contents selected-filters apply-filter)))
-
-#_(defn- perform-filtering [html-contents monitor filter-type]
-    (if (nil? (:filters monitor))
-      html-contents
-      (let [all-filters
-            (:filters monitor)
-            [selected-filters get-json-filter get-text]
-            (case filter-type
-              "general"
-              [(filter
-                #(not (or (contains? % :text-css-selector)
-                          (contains? % :href-filters)))
-                all-filters)
-               identity
-               (fn [html-content _]
-                 (:text html-content))]
-              "selected"
-              [(let [css-selector-filters
-                     (filter #(contains? % :text-css-selector) all-filters)]
-                 (sf/map-maybe-collection
-                  (fn [css-selector-filter]
-                    {:function
-                     (select-keys css-selector-filter [:operator :filter-value])
-                     :text-css-selector
-                     (:text-css-selector css-selector-filter)})
-                  css-selector-filters))
-               (fn [selected-filter]
-                 (:function selected-filter))
-               (fn [html-content selected-filter]
-                 (:text (first (perform-extraction
-                                (parse-html-content
-                                 (:text-css-selector selected-filter)
-                                 html-content)
-                                (assoc monitor
-                                       :text-css-selectors []
-                                       :href-css-selectors [])))))])
-            apply-all-filters
-            (fn [html-content]
-              (letfn [(apply-filter [selected-filter]
-                        ((make-filter-function
-                          (get-json-filter selected-filter))
-                         (get-text html-content selected-filter)))]
-                (every? apply-filter selected-filters)))]
-        (filter apply-all-filters html-contents))))
+                                :href-css-selectors [])))))]
+    (perform-filtering-core
+     html-contents selected-filter-functions get-text)))
 
 (defn- scrape-html-contents [monitor]
   (hickory/as-hickory (hickory/parse (s/fetch-html-string monitor))))
@@ -328,7 +286,7 @@
   (letfn [(core-perform-href-filtering [href-filters href-html-content]
             (let [{text-filters false
                    inner-href-filters true}
-                  (group-by #(contains? % :href-filters) href-filters)
+                  (group-by #(= (:type %) "href") href-filters)
                   parsed-text-contents
                   (map (fn [text-filter]
                          {:extracted-contents
@@ -344,7 +302,7 @@
                   (map #(:text (first
                                 (perform-general-filtering
                                  (:extracted-contents %)
-                                 {:filters [(dissoc % :extracted-contents)]})))
+                                 [(dissoc % :extracted-contents)])))
                        parsed-text-contents)
                   extract-href-content
                   (fn [css-selector]
@@ -375,15 +333,14 @@
                 false)))]
     (filter
      (fn [html-content]
-       (if (some #(contains? % :href-filters) (:filters monitor))
+       (if (some #(= (:type %) "href") (:filters monitor))
          (if (and (not (str/includes? (:hrefs html-content) "\n"))
                   (not (= (:hrefs html-content) "")))
            (let [scrape-url
                  (:hrefs html-content)
                  href-filters
                  (:href-filters
-                  (first (filter #(contains? % :href-filters)
-                                 (:filters monitor))))
+                  (first (filter #(= (:type %) "href") (:filters monitor))))
                  href-html-content
                  (scrape-html-contents (assoc monitor :url scrape-url))]
              (core-perform-href-filtering href-filters href-html-content))
@@ -391,15 +348,38 @@
          true))
      html-contents)))
 
-(defn perform-monitoring [monitor]
-  (let [html-contents
-        (scrape-html-contents monitor)
-        parsed-html-contents
-        (manage-parse-html-contents html-contents monitor)
-        filtered-pre-extracted-contents
-        (perform-selected-filtering parsed-html-contents monitor)
-        extracted-contents
-        (perform-extraction filtered-pre-extracted-contents monitor)
-        filtered-extracted-contents
-        (perform-general-filtering extracted-contents monitor)]
-    (distinct filtered-extracted-contents)))
+(defn- perform-custom-filtering [web-contents filters]
+  (let [custom-filter-data
+        (filter #(= (:type %) "custom") filters)
+        filter-paths
+        (map #(sf/get-file-path
+               (str "/resources/filter_scripts/" (:script-name %)))
+             custom-filter-data)
+        parse-script-output
+        (fn [script-output]
+          (= (str/lower-case (str/trim (:out script-output))) "true"))
+        filter-functions
+        (map (fn [filter-path]
+               {:function
+                (fn [content-json-string]
+                  (parse-script-output (sh filter-path content-json-string)))})
+             filter-paths)
+        get-text
+        (fn [html-content _]
+          (sf/make-json-string (:text html-content)))]
+    (perform-filtering-core web-contents filter-functions get-text)))
+
+(defn manage-new-web-content-filtering [new-web-contents monitor]
+  (-> new-web-contents
+      (perform-href-filtering (assoc monitor :url (first (:url monitor))))
+      (perform-custom-filtering (:filters monitor))))
+
+(defn process-html-string [fetched-html monitor]
+  (-> fetched-html
+      hickory/parse
+      hickory/as-hickory
+      (manage-parse-html-contents monitor)
+      (perform-selected-filtering monitor)
+      (perform-extraction monitor)
+      (perform-general-filtering (:filters monitor))
+      distinct))

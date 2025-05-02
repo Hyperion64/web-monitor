@@ -5,8 +5,7 @@
             [clj-http.client :as client]
             [clojure.java.shell :refer [sh]]))
 
-(defn- send-matrix-message
-  [web-elements monitor-name matrix-account-details]
+(defn- send-matrix-message [web-elements monitor-name matrix-account-details]
   (let [make-message-header
         (fn [web-element]
           (apply str (case (:type web-element)
@@ -43,17 +42,15 @@
                         :content-type :json}]
     (client/post message-url message-params)))
 
-(defn- make-json-string [web-elements]
-  (json/write-str web-elements :escape-slash false))
-
 (defn- send-custom-script-message [json-string message-script-name]
   (let [project-path
         (sf/get-file-path
          (str "/resources/notification_scripts/" message-script-name))]
     (sh project-path json-string)))
 
-(defn notify-user [web-elements first-monitoring monitor account-details]
+(defn notify-user [web-elements monitor account-details]
   (let [elements-type (:type (first web-elements))
+        first-monitoring (:first-monitoring (first web-elements))
         matrix-account-details (:matrix account-details)
         messengers (:messengers monitor)
         monitor-name (:name monitor)
@@ -61,7 +58,7 @@
         notify-if-element-removed (:notify-if-element-removed monitor)
         notify-if-element-rediscovered
         (:notify-if-element-rediscovered monitor)
-        json-string (make-json-string web-elements)]
+        json-string (sf/make-json-string web-elements)]
     (doseq [messenger messengers]
       (when
        (and (or (not first-monitoring)

@@ -1,5 +1,6 @@
 (ns processing.parse-input
-  (:require [clojure.string :as str]))
+  (:require [utils.shared-functions :as sf]
+            [clojure.string :as str]))
 
 (defn- missing-setting-updates [monitor config-settings]
   (let [settings
@@ -8,12 +9,14 @@
               :js-load-time-seconds           2
               :frequency                      "15m"
               :url-range-frequency            15
+              :continuous                     false
               :messengers                     #{"rss" "print"}
               :report-first-found             #{"rss"}
               :notify-if-element-removed      #{}
               :notify-if-element-rediscovered #{}
               :url                            []
               :url-range                      []
+              :filters                        []
               :text-css-selectors             []
               :href-css-selectors             []})
         apply-settings
@@ -82,6 +85,26 @@
    monitor
    notification-selector-parameters))
 
+(defn- add-types-to-filters [monitor]
+  (assoc monitor
+         :filters
+         (map (fn [filter-map]
+                (cond
+                  (contains? filter-map :text-css-selector)
+                  (assoc filter-map :type "select")
+                  (contains? filter-map :href-filters)
+                  (assoc filter-map
+                         :type
+                         "href"
+                         :href-filters
+                         (add-types-to-filters
+                          {:filters (:href-filters filter-map)}))
+                  (contains? filter-map :script-name)
+                  (assoc filter-map :type "custom")
+                  :else
+                  (assoc filter-map :type "general")))
+              (:filters monitor))))
+
 (defn- add-infinite-url-range-limit [monitor]
   (let [url-range (:url-range monitor)
         infinity  Double/POSITIVE_INFINITY]
@@ -96,6 +119,14 @@
         :else
         monitor)
       monitor)))
+
+(defn- include-file-urls [monitor]
+  (if-not (nil? (:url-file monitor))
+    (let [file-path (sf/get-file-path
+                     (str "resources/url_files/" (:url-file monitor)))
+          urls (sf/read-in-file file-path line-seq)]
+      (update monitor :url concat urls))
+    monitor))
 
 (defn- convert-frequency-string-to-ms [monitor]
   (let [time-vector
@@ -125,6 +156,8 @@
             string-vector-to-set-updates
             report-first-rss-updates
             remove-irrelevant-details-updates
+            add-types-to-filters
             add-infinite-url-range-limit
+            include-file-urls
             convert-frequency-string-to-ms)
        monitors))

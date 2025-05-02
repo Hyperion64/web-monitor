@@ -1,5 +1,7 @@
 (ns utils.shared-functions
-  (:require [clojure.string :as str]
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [java-time.api :as jt])
   (:import  [java.nio.file Paths]))
 
@@ -16,6 +18,9 @@
   (if (coll? maybe-map)
     (map f maybe-map)
     [(f maybe-map)]))
+
+(defn make-json-string [web-elements]
+  (json/write-str web-elements :escape-slash false))
 
 (defn- get-relative-dir-root-path []
   (let [classpath-elements
@@ -46,3 +51,7 @@
 
 (defn get-file-path [path-end]
   (str root-path path-end))
+
+(defn read-in-file [file-path parse-fn]
+  (with-open [reader (io/reader file-path)]
+    (doall (parse-fn reader))))

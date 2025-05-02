@@ -2,7 +2,7 @@
     "settings": {
         "frequency": "15m 30s",
         "rss-port": 8080,
-        "browser": "chrome",
+        "browser": "firefox",
         "javascript": true,
         "js-load-time-seconds": 6,
         "messengers": [

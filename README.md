@@ -67,7 +67,9 @@ The config.json file contains the following 3 JSON objects:
 
 * **monitors**
   - "name": sets unique name for each monitor.
+  - "continuous": boolean which is false by default. Use it to define if the website should remain opened instead of being repeatedly opened and closed again. Great for high frequency scrapes. The frequency will still be the same as defined with the "frequency" parameter so make sure to adjust it appropriately for the monitor.
   - "url": url of website to scrape. Can also be an array of websites.
+  - "url-file": filename of a txt file inside the folder resources/url_files which should contain urls separated by newlines.
   - "url-range": array with 5 elements (of which only the first 2 are mandatory) in order: 
     - first part of the url.
     - second part of the url.
@@ -83,12 +85,18 @@ The config.json file contains the following 3 JSON objects:
     
     Fill it with the selector of the html elements which contain the content you are interested in. If there are multiple articles on a website, define the CSS selector with the attributes of the outermost element of each article, it will then get all articles which have this structure. "classes" and "ids" can be defined as strings or arrays.
   - "inner-css-selector": if the individual elements don't have distinct attributes but are in a table and have tags like &lt;li&gt; each, put the attributes for the table in "css-selector" and (in this case) "tag": "li" in "inner-css-selector". Input is specified in the same format as "css-selector".
-  - "filters": a JSON object with elements:
+  - "filters": a JSON object of one of four types. With the exception of the custom-filter type, they all have the parameters: operator, filter-value, format (optional). Additionally each type has a different parameter from which web-monitor will automatically infer the type of the filter. Here are the types and the specific parameter they have:
+    - "select": "text-css-selector"
+    - "href-based": "href-filters"
+    - "custom-filter": "script-name"
+    - "general": none
+    Here is the format and meaning of said parameters. 
     - "operator": can be defined as "contains", "!contains" ,"=", "!=", "<=", ">=", "<", ">" where "contains" and "!contains" are only available for strings but the other operations are available for every type including dates.
     - "filter-value": can be a number or string.
-    - "format": if left out it will be string or number depending on the value. If a different number format is required, it can be specified with "dsxtsy" where x is some symbol for the decimal seperator and y is some symbol for the thousand seperator, for example "ds,ts." would be the german way to write numbers. It can also be a date format like for example "yyyy-MM-dd" which will be extracted and parsed from the text (so the element can contain other text which will be ignored). Take a look at joda-time which web-monitor is using to see which formats are available and how to define them. The only thing which it can not parse are time-zones. At least in theory as this needs a lot more testing.
+    - "format": if left out it will be string or number depending on the filter-value. If a different number format is required, it can be specified with "dsxtsy" where x is some symbol for the decimal seperator and y is some symbol for the thousand seperator, for example "ds,ts." would be the german way to write numbers. It can also be a date format like for example "yyyy-MM-dd" which will be extracted and parsed from the text (so the element can contain other text which will be ignored). Take a look at joda-time which web-monitor is using to see which formats are available and how to define them. The only thing which it can not parse are time-zones. At least in theory as this needs a lot more testing.
     - "text-css-selector": to specify where the text in the elmement is located that should be used to apply the filter to in order to decide if the entire html-elemnt should be selected. The input is defined in the same format as "css-selector". "text-css-selector" can be left out to apply the filter to the entire element.
     - "href-filters": will filter based on the website linked to via the web element. To use this, make sure that only one href-link is found by restricting the search with a href-css-selector. Specify on which part of the website the filter should be applied to with a css-selector object as used to define the monitors and then add the usual filter parameter objects. You can also recursively define yet another href-filter within this filter and so on.
+    - "custom-filter": name of a executable file inside resources/filter_scripts which will have to take in a json object with parameters text which contains the text of the web content found, and hrefs which contains all the links separated by newlines. The output should be a map with the key "out", which must be either "true" for accepted or "false" for rejected/filtered. If you use echo in bash for the output, it will suffice. It is recommended to execute the filter script through the bash script (so provide the bash script name here) and then pipe the result into echo for ensured compatibility.
   - "text-css-selector": can optionally be defined to filter which part of the text of the element should be displayed in the notifications. Input can be JSON object or array of JSON objects with format specified for "css-selector".
   - "href-css-selector": can optionally be defined to filter which links of the element should be displayed in the notifications. Input can be JSON object or array of JSON objects with format specified for "css-selector".
   - "active": bool which defaults to true. Can be useful if you want to keep the monitor for now but do not want to have it running.

@@ -150,17 +150,20 @@
                :not_seen_since)
              web-elements)
         converted-web-elements-without-filtered
-        (filter #(= (:filtered %) 0) converted-web-elements)
+        (filter #(= (:filtered_out %) 0) converted-web-elements)
         {existing-web-elements true
          removed-web-elements false}
         (group-by #(nil? (:not-seen-since %))
                   converted-web-elements-without-filtered)
-        select-text-hrefs
-        (fn [web-elements]
-          (map #(select-keys % [:text :hrefs]) web-elements))]
-    (map select-text-hrefs [converted-web-elements
-                            existing-web-elements
-                            removed-web-elements])))
+        web-elements-text-and-hrefs
+        (map (fn [web-elements]
+               (map #(select-keys % [:text :hrefs]) web-elements))
+             [converted-web-elements
+              existing-web-elements
+              removed-web-elements])]
+    {:all      (nth web-elements-text-and-hrefs 0)
+     :existing (nth web-elements-text-and-hrefs 1)
+     :removed  (nth web-elements-text-and-hrefs 2)}))
 
 (defn save-web-elements [web-elements]
   (let [elements-type
@@ -193,12 +196,5 @@
           [ad/insert-web-element make-new-db-web-element]
           (contains? #{"removed" "rediscovered"} elements-type)
           [ad/update-not-seen-since make-update-db-web-element])]
-    #_(cond
-        (= elements-type "new")
-        (doseq [web-element web-elements]
-          (ad/insert-web-element (make-new-db-web-element web-element)))
-        (contains? #{"removed" "rediscovered"} elements-type)
-        (doseq [web-element web-elements]
-          (ad/update-not-seen-since (make-update-db-web-element web-element))))
     (doseq [web-element web-elements]
       (db-function (make-web-element-function web-element)))))
