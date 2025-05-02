@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>README</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="web-monitor">web-monitor</h1>
+<p>web-monitor is a universal web-scraper written in Clojure with a
+notification system attached. It is mostly meant to be applied to
+reoccurring elements with the same css to get notifications if a new
+article, video, product, etc. entry has been published. But it can also
+be used to monitor changes of one specific element of a website. Of
+course you can filter elements with different criteria which even
+involves accessing the page an element is linking to and applying the
+filter to elements there.</p>
+<p>Receive said notifications via matrix, rss, std output, pipe it into
+your own script or simply read out the SQLite database.</p>
+<h2 id="installation">Installation</h2>
+<ul>
+<li><p>Only works on Linux.</p></li>
+<li><p>The program is available as a jar in the web-monitor.tar file
+that you can find under releases, which also contains all the other
+relevant files to run it. This file can be found under “Releases”. You
+will need Java 11 to run that jar file. Learn how to start it under
+<strong>How to start it</strong>.</p></li>
+<li><p>Or just clone the repo and use leiningen. But then it will be
+completely compiled everytime and there is no reason to get leiningen
+for it unless you want to modify the code.</p></li>
+<li><p>To scrape websites with JavaScript loading enabled, web-monitor
+also requires Firefox and a compatible Geckodriver version or Chrome and
+a compatible Chromedriver version. Ensure Geckodriver or chromedriver
+are executable in your system path.</p></li>
+</ul>
+<h2 id="usage">Usage</h2>
+<h3 id="project-file-structure">Project file structure</h3>
+<ul>
+<li><p>config.json: here you configure the web-monitor, a detailed
+explanation follows in <strong>Setting up config.json</strong>.</p></li>
+<li><p>data: contains two folders:</p>
+<ul>
+<li>db: contains the SQLite database.</li>
+<li>rss_feeds: contains all rss-feed xml files.</li>
+</ul></li>
+<li><p>notification_scripts: put your custom notifications scripts here
+as described below.</p></li>
+</ul>
+<h3 id="setting-up-config.json">Setting up config.json:</h3>
+<p>The config.json file contains the following 3 JSON objects:</p>
+<ul>
+<li><p><strong>settings</strong></p>
+<ul>
+<li>“frequency”: string which sets frequency of scraping. You can use a
+number, followed by ms, s, m, h or d to specify how long. You can also
+put multiple which will then be added. Like lets say a valid input would
+be “12m 10s”.</li>
+<li>“url-range-frequency”: number which specifies how often the program
+will iterate over the url-range. 15 means it will iterate over the range
+every 15th time. See what a url-range is below.</li>
+<li>“rss-port”: sets port for rss feeds.</li>
+<li>“browser”: sets the browser used for scraping. “none” is the
+default. The other options are “firefox” and “chrome” if javascript
+should be loaded. Note that loading the js is by far the most resource
+intensive part in this program and could slow down already very busy and
+slow computers significantly for high frequency scrapes. Also note the
+dependencies in <strong>Installation</strong>.</li>
+<li>“js-load-time-seconds”: set how long the js has time to load for
+each scraping, defaults to 2.</li>
+<li>“messengers”:
+<ul>
+<li>“matrix”</li>
+<li>“rss”: “rss” will automatically create an rss feed which you can
+use. Just provide a link like:
+http://localhost:8080/Example-monitor-name.xml to your rss reader with
+the localhost number being the port number specified in the settings.
+The rss file will be deleted if the monitor is removed from the config
+or if the details for the extraction of the monitor have changed but if
+rss is still defined as a messenger, it will just be replaced of course.
+It is not being deleted if it is merely deactivated.</li>
+<li>“print”</li>
+<li>“notify-send”: will make a system notification with the found
+text.</li>
+<li>the file names of custom scripts inside
+resources/notification_scripts are supported to which the newly found
+elements will be passed, just include the file name here.</li>
+</ul>
+“print” and the custom script will pass the content in the form of a
+array of JSON objects with keys:
+<ul>
+<li>“monitor-name”: the name of the monitor.</li>
+<li>“text”: the text found in the element.</li>
+<li>“hrefs”: the links found in the element.</li>
+<li>“datetime”: the exact time it was found. In the format dd.MM.yyyy
+HH:mm:ss with the timezone that the computer has as a system
+setting.</li>
+<li>“type”: “new”, “removed” or “rediscovered.</li>
+</ul>
+“messengers” can be specified as a string or array, depending on if you
+want one or multiple.</li>
+<li>“report-first-found”: string or array is given with messengers for
+which newly found content should be sent if the monitor has never been
+used before. Booleans are also allowed where true means every messenger
+and false means only rss. Always automatically enabled for rss. Defaults
+to only enabled for rss.</li>
+<li>“notify-if-element-removed”: Same input as “report-first-found”
+where the meaning of the inputs is equivalent but applied to notifying
+the user if an elemnt was removed, only that false does not include rss
+either. Defaults to false.</li>
+<li>“notify-if-element-rediscovered”: Same as
+“notify-if-element-removed” but it is about notifying the user if a
+previously removed element has been found on the website again. Defaults
+to false.</li>
+</ul>
+<p>All but frequency-minutes and rss-port can be overwritten for the
+individual monitors. A default definition in settings is not required if
+it is specified in every monitor.</p>
+<p>Also note, that all web-elements related to a monitor will be deleted
+from the database if the monitors properties relating to the kind of
+content being extracted has been modified. Specifically the parameters:
+“javascript”, “url”, “url-range”, “css-selector”, “inner-css-selector”,
+“filters”, “text-css-selector” and “href-css-selector”. This will also
+happen, if the general settings have been changed and you have not
+overwritten it in the specific monitor configuration. This is to avoid
+any confusion, otherwise web-monitor would potentially think that an
+element has disappeared and notify the user about it even though just
+the filter has changed and the element is simply being filtered now. The
+deletions are only really relevant if you want to be notified about
+content found on the first scan as it will then do a new first scan
+after the modification, or if you access the SQLite database
+directly.</p></li>
+<li><p><strong>account-details</strong></p>
+<ul>
+<li>Currently only matrix is supported in terms of messengers needing
+accounts. You can always pass the output to a custom script instead,
+where you define account details if you want to use a different
+messenger. Specify a JSON object with name “matrix” that has the
+following keys:
+<ul>
+<li>“homeserver”</li>
+<li>“username”</li>
+<li>“password”</li>
+<li>“room-id”</li>
+</ul></li>
+</ul></li>
+<li><p><strong>monitors</strong></p>
+<ul>
+<li>“name”: sets unique name for each monitor.</li>
+<li>“continuous”: boolean which is false by default. Use it to define if
+the website should remain opened instead of being repeatedly opened and
+closed again. Great for high frequency scrapes. The frequency will still
+be the same as defined with the “frequency” parameter so make sure to
+adjust it appropriately for the monitor.</li>
+<li>“url”: url of website to scrape. Can also be an array of
+websites.</li>
+<li>“url-file”: filename of a txt file inside the folder
+resources/url_files which should contain urls separated by
+newlines.</li>
+<li>“url-range”: array with 5 elements (of which only the first 2 are
+mandatory) in order:
+<ul>
+<li>first part of the url.</li>
+<li>second part of the url.</li>
+<li>the number you want to increment from, which is in between the two
+parts. Defaults to 1.</li>
+<li>the amount of tries it should make with a higher increment before
+giving up if no specified content is found, defaults to 5.</li>
+<li>max amount of websites it should succesfully scrape, defaults to
+infinity. You don’t need to specify url if you specify url-range and
+vice versa.</li>
+</ul></li>
+<li>“css-selector”: a JSON object with the keys:
+<ul>
+<li>“tag”: for example put “tag”: “div” if the element is
+&lt;div&gt;.</li>
+<li>“classes”</li>
+<li>“ids”</li>
+<li>“type”</li>
+</ul>
+Fill it with the selector of the html elements which contain the content
+you are interested in. If there are multiple articles on a website,
+define the CSS selector with the attributes of the outermost element of
+each article, it will then get all articles which have this structure.
+“classes” and “ids” can be defined as strings or arrays.</li>
+<li>“inner-css-selector”: if the individual elements don’t have distinct
+attributes but are in a table and have tags like &lt;li&gt; each, put
+the attributes for the table in “css-selector” and (in this case) “tag”:
+“li” in “inner-css-selector”. Input is specified in the same format as
+“css-selector”.</li>
+<li>“filters”: a JSON object of one of four types. With the exception of
+the custom-filter type, they all have the parameters: operator,
+filter-value, format (optional). Additionally each type has a different
+parameter from which web-monitor will automatically infer the type of
+the filter. Here are the types and the specific parameter they have:
+<ul>
+<li>“select”: “text-css-selector”</li>
+<li>“href-based”: “href-filters”</li>
+<li>“custom-filter”: “script-name”</li>
+<li>“general”: none</li>
+</ul>
+Here is the format and meaning of said parameters.
+<ul>
+<li>“operator”: can be defined as “contains”, “!contains” ,“=”, “!=”,
+“&lt;=”, “&gt;=”, “&lt;”, “&gt;” where “contains” and “!contains” are
+only available for strings but the other operations are available for
+every type including dates.</li>
+<li>“filter-value”: can be a number or string.</li>
+<li>“format”: if left out it will be string or number depending on the
+filter-value. If a different number format is required, it can be
+specified with “dsxtsy” where x is some symbol for the decimal seperator
+and y is some symbol for the thousand seperator, for example “ds,ts.”
+would be the german way to write numbers. It can also be a date format
+like for example “yyyy-MM-dd” which will be extracted and parsed from
+the text (so the element can contain other text which will be ignored).
+Take a look at joda-time which web-monitor is using to see which formats
+are available and how to define them. The only thing which it can not
+parse are time-zones. At least in theory as this needs a lot more
+testing.</li>
+<li>“text-css-selector”: to specify where the text in the elmement is
+located that should be used to apply the filter to in order to decide if
+the entire html-elemnt should be selected. The input is defined in the
+same format as “css-selector”. “text-css-selector” can be left out to
+apply the filter to the entire element.</li>
+<li>“href-filters”: will filter based on the website linked to via the
+web element. To use this, make sure that only one href-link is found by
+restricting the search with a href-css-selector. Specify on which part
+of the website the filter should be applied to with a css-selector
+object as used to define the monitors and then add the usual filter
+parameter objects. You can also recursively define yet another
+href-filter within this filter and so on.</li>
+<li>“custom-filter”: name of a executable file inside
+resources/filter_scripts which will have to take in a json object with
+parameters text which contains the text of the web content found, and
+hrefs which contains all the links separated by newlines. The output
+should be a map with the key “out”, which must be either “true” for
+accepted or “false” for rejected/filtered. If you use echo in bash for
+the output, it will suffice. It is recommended to execute the filter
+script through the bash script (so provide the bash script name here)
+and then pipe the result into echo for ensured compatibility.</li>
+</ul></li>
+<li>“text-css-selector”: can optionally be defined to filter which part
+of the text of the element should be displayed in the notifications.
+Input can be JSON object or array of JSON objects with format specified
+for “css-selector”.</li>
+<li>“href-css-selector”: can optionally be defined to filter which links
+of the element should be displayed in the notifications. Input can be
+JSON object or array of JSON objects with format specified for
+“css-selector”.</li>
+<li>“active”: bool which defaults to true. Can be useful if you want to
+keep the monitor for now but do not want to have it running.</li>
+</ul></li>
+</ul>
+<h3 id="how-to-start-it">How to start it:</h3>
+<p>Start it with the included start-web-monitor.sh script or execute
+<code>lein run</code> if you use leiningen. The program does not use the
+path relative to the user to access the needed files, it can be run from
+anywhere. This goes for both the jar file and the leininge project.
+Web-monitor will parse the config before every scraping so it will
+automatically load updated settings without a restart needed, unless you
+want to modify the rss port number.</p>
+<h3 id="bugs">Bugs</h3>
+<ul>
+<li>When scraping with js loading enabled, there are some websites where
+the js code crashes. It seems like their JS relies on metadata that
+web-monitor is not providing (yet).</li>
+</ul>
+</body>
+</html>

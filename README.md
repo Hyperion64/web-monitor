@@ -90,6 +90,7 @@ The config.json file contains the following 3 JSON objects:
     - "href-based": "href-filters"
     - "custom-filter": "script-name"
     - "general": none
+
     Here is the format and meaning of said parameters. 
     - "operator": can be defined as "contains", "!contains" ,"=", "!=", "<=", ">=", "<", ">" where "contains" and "!contains" are only available for strings but the other operations are available for every type including dates.
     - "filter-value": can be a number or string.
