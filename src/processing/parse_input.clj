@@ -106,9 +106,23 @@
               (:filters monitor))))
 
 (defn- add-infinite-url-range-limit [monitor]
-  (let [url-range (:url-range monitor)
-        infinity  Double/POSITIVE_INFINITY]
-    (if-not (nil? url-range)
+  (if-not (empty? (:url-range monitor))
+    (let [url-range
+          (:url-range monitor)
+          infinity
+          Double/POSITIVE_INFINITY
+          url-range-tolerance
+          (if-not (:tolerance url-range)
+            (assoc url-range :tolerance 0)
+            url-range)
+          url-range-tolerance-max-scrapes
+          (if (or (not (:max-scrapes url-range-tolerance))
+                  (= (:max-scrapes url-range-tolerance) 0))
+            (assoc url-range-tolerance :max-scrapes infinity)
+            url-range-tolerance)]
+      (assoc monitor :url-range url-range-tolerance-max-scrapes))
+    monitor)
+  #_(if-not (nil? url-range)
       (cond
         (= (count url-range) 2)
         (assoc monitor :url-range (conj url-range 1 5 infinity))
@@ -118,7 +132,7 @@
         (assoc monitor :url-range (conj url-range infinity))
         :else
         monitor)
-      monitor)))
+      monitor))
 
 (defn- include-file-urls [monitor]
   (if-not (nil? (:url-file monitor))

@@ -26,13 +26,15 @@
         {
             "name": "Thinkpad_t4802",
             "url": "https://www.kleinanzeigen.de/s-thinkpad-t480/k0",
-            "url-range": [
-                "https://www.kleinanzeigen.de/s-seite:",
-                "/thinkpad-t480/k0",
-                2,
-                0,
-                10
-            ],
+            "url-range": {
+                "url-parts": [
+                    "https://www.kleinanzeigen.de/s-seite:",
+                    "/thinkpad-t480/k0",
+                    2
+                ],
+                "tolerance": 0,
+                "max-scrapes": 10
+            },
             "url-range-frequency": 15,
             "css-selector": {
                 "tag": "div",
@@ -52,7 +54,7 @@
                 "tag": "h2",
                 "classes": "text-module-begin"
             },
-            "active": false
+            "active": true
         },
         {
             "name": "Thinkpad_t480",
@@ -152,7 +154,7 @@
                     "artwork"
                 ]
             },
-            "active": true
+            "active": false
         }
     ]
 }

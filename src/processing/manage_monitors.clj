@@ -36,11 +36,11 @@
           (manage-iterate-monitoring-url-range []
             (let [url-range (:url-range monitor)]
               (if-not (empty? url-range)
-                (let [first-url-part  (nth    url-range 0)
-                      second-url-part (nth    url-range 1)
-                      iterator        (nth    url-range 2)
-                      tolerance       (nth    url-range 3)
-                      max-scrapes     (nth    url-range 4)]
+                (let [first-url-part  (nth (:url-parts url-range) 0)
+                      second-url-part (nth (:url-parts url-range) 1)
+                      iterator        (nth (:url-parts url-range) 2)
+                      tolerance   (:tolerance   url-range)
+                      max-scrapes (:max-scrapes url-range)]
                   (iterate-monitoring-url-range
                    first-url-part second-url-part iterator
                    tolerance tolerance max-scrapes))
