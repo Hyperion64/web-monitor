@@ -121,18 +121,7 @@
             (assoc url-range-tolerance :max-scrapes infinity)
             url-range-tolerance)]
       (assoc monitor :url-range url-range-tolerance-max-scrapes))
-    monitor)
-  #_(if-not (nil? url-range)
-      (cond
-        (= (count url-range) 2)
-        (assoc monitor :url-range (conj url-range 1 5 infinity))
-        (= (count url-range) 3)
-        (assoc monitor :url-range (conj url-range 5 infinity))
-        (= (count url-range) 4)
-        (assoc monitor :url-range (conj url-range infinity))
-        :else
-        monitor)
-      monitor))
+    monitor))
 
 (defn- include-file-urls [monitor]
   (if-not (nil? (:url-file monitor))

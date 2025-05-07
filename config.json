@@ -54,7 +54,7 @@
                 "tag": "h2",
                 "classes": "text-module-begin"
             },
-            "active": true
+            "active": false
         },
         {
             "name": "Thinkpad_t480",
@@ -147,14 +147,41 @@
                 "tag": "dd",
                 "classes": "release-title"
             },
-            "href-css-selectorsss": {
+            "href-css-selectors": {
                 "tag": "a",
                 "classes": [
                     "main-product-image",
                     "artwork"
                 ]
             },
+            "href-addition": {
+                "tag": "dd",
+                "classes": "catalogue-number"
+            },
             "active": false
+        },
+        {
+            "name": "bytebytego",
+            "comment": "substack offers a rss feed already, just an example.",
+            "url": "https://blog.bytebytego.com/archive",
+            "css-selector": {
+                "tag": "a",
+                "classes": [
+                    "pencraft",
+                    "pc-reset",
+                    "color-pub-primary-text-NyXPlw",
+                    "font-pub-headings-FE5byy",
+                    "clamp-y7pNm8",
+                    "clamp-3-lxFDfR",
+                    "reset-IxiVJZ"
+                ]
+            },
+            "frequency": "1m",
+            "href-addition": {
+                "tag": "div",
+                "classes": "available-content"
+            },
+            "active": true
         }
     ]
 }

@@ -165,21 +165,13 @@
      :existing (nth web-elements-text-and-hrefs 1)
      :removed  (nth web-elements-text-and-hrefs 2)}))
 
-(defn save-web-elements [web-elements]
-  (let [elements-type
-        (:type (first web-elements))
-        elements-datetime
+(defn save-web-elements [elements-type web-elements]
+  (let [elements-datetime
         (:datetime (first web-elements))
         not-seen-since
-        (case elements-type
-          "removed"      elements-datetime
-          "rediscovered" nil
-          nil)
+        (elements-type {:removed elements-datetime})
         filtered-by-href-filter
-        (case elements-type
-          "new" 0
-          "filtered-out" 1
-          nil)
+        (elements-type {:new 0 :filtered-out 1})
         make-new-db-web-element
         (fn [web-element]
           (assoc
@@ -192,9 +184,9 @@
            :not-seen-since not-seen-since))
         [db-function make-web-element-function]
         (cond
-          (contains? #{"new" "filtered-out"} elements-type)
+          (elements-type {:new true :filtered-out true})
           [ad/insert-web-element make-new-db-web-element]
-          (contains? #{"removed" "rediscovered"} elements-type)
+          (elements-type {:removed true :rediscovered true})
           [ad/update-not-seen-since make-update-db-web-element])]
     (doseq [web-element web-elements]
       (db-function (make-web-element-function web-element)))))

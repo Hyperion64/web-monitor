@@ -282,6 +282,12 @@
           parsed-html-contents)]
     parsed-inner-html-contents))
 
+(defn- valid-hrefs-for-accessing? [html-content]
+  (let [hrefs (:hrefs html-content)]
+    (not (or (str/includes? hrefs "\n")
+             (str/blank?    hrefs)
+             (nil?          hrefs)))))
+
 (defn perform-href-filtering [html-contents monitor]
   (letfn [(core-perform-href-filtering [href-filters href-html-content]
             (let [{text-filters false
@@ -334,8 +340,7 @@
     (filter
      (fn [html-content]
        (if (some #(= (:type %) "href") (:filters monitor))
-         (if (and (not (str/includes? (:hrefs html-content) "\n"))
-                  (not (= (:hrefs html-content) "")))
+         (if (valid-hrefs-for-accessing? html-content)
            (let [scrape-url
                  (:hrefs html-content)
                  href-filters
@@ -368,6 +373,30 @@
         (fn [html-content _]
           (sf/make-json-string (:text html-content)))]
     (perform-filtering-core web-contents filter-functions get-text)))
+
+(defn perform-extract-href-content [html-contents monitor]
+  (let [href-addition (:href-addition monitor)]
+    (if-not (empty? href-addition)
+      (map (fn [html-content]
+             (if (valid-hrefs-for-accessing? html-content)
+               (let [href-monitor
+                     {:url                  (:hrefs html-content)
+                      :css-selector         href-addition
+                      :js-load-time-seconds (:js-load-time-seconds monitor)
+                      :browser              (:browser monitor)}
+                     href-html-content
+                     (first (-> href-monitor
+                                scrape-html-contents
+                                (manage-parse-html-contents href-monitor)
+                                (perform-extraction         href-monitor)))]
+                 (assoc html-content
+                        :text
+                        (str (:text html-content)
+                             "\n\n\n"
+                             (:text href-html-content))))
+               html-content))
+           html-contents)
+      html-contents)))
 
 (defn manage-new-web-content-filtering [new-web-contents monitor]
   (-> new-web-contents

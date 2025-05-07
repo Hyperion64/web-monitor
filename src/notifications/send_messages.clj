@@ -48,35 +48,32 @@
          (str "/resources/notification_scripts/" message-script-name))]
     (sh project-path json-string)))
 
-(defn notify-user [web-elements monitor account-details]
-  (let [elements-type (:type (first web-elements))
-        first-monitoring (:first-monitoring (first web-elements))
-        matrix-account-details (:matrix account-details)
-        messengers (:messengers monitor)
-        monitor-name (:name monitor)
-        report-first-found (:report-first-found monitor)
-        notify-if-element-removed (:notify-if-element-removed monitor)
-        notify-if-element-rediscovered
-        (:notify-if-element-rediscovered monitor)
-        json-string (sf/make-json-string web-elements)]
+(defn notify-user [elements-type web-elements monitor account-details]
+  (let [first-monitoring   (:first-monitoring (first web-elements))
+        messengers         (:messengers monitor)
+        report-first-found (:report-first-found monitor)]
     (doseq [messenger messengers]
-      (when
-       (and (or (not first-monitoring)
-                (contains? report-first-found messenger))
-            (or (= elements-type "new")
-                (and (= elements-type "removed")
-                     (contains? notify-if-element-removed messenger))
-                (and (= elements-type "rediscovered")
-                     (contains? notify-if-element-rediscovered messenger))))
+      (when (and (or (not first-monitoring)
+                     (contains? report-first-found messenger))
+                 (elements-type
+                  {:new
+                   true
+                   :removed
+                   ((:notify-if-element-removed monitor) messenger)
+                   :rediscovered
+                   ((:notify-if-element-rediscovered monitor) messenger)}))
         (case messenger
           "rss"
           (rf/process-web-elements (reverse web-elements) monitor)
           "matrix"
-          (send-matrix-message web-elements monitor-name matrix-account-details)
+          (send-matrix-message
+           web-elements (:name monitor) (:matrix account-details))
           "print"
-          (println json-string)
+          (doseq [web-element web-elements]
+            (println (sf/make-json-string web-element)))
           "notify-send"
           (doseq  [element-texts (map #(:text %) web-elements)]
             (sh "notify-send" element-texts)
             (Thread/sleep (* 1000 2)))
-          (send-custom-script-message json-string messenger))))))
+          (send-custom-script-message
+           (sf/make-json-string web-elements) messenger))))))

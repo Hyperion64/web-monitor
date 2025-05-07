@@ -51,27 +51,55 @@
                      (:url monitor)))
                (manage-iterate-monitoring-url-range)))))
 
-(defn- manage-create-output [all-web-contents monitor account-details]
-  (let [create-web-elements
-        (fn [web-contents web-content-type]
-          (map (fn [web-content]
-                 {:monitor-name     (:name monitor)
-                  :text             (or (:text web-content) "")
-                  :hrefs            (:hrefs web-content)
-                  :datetime         (sf/make-datetime)
-                  :first-monitoring (empty? (:all-db all-web-contents))
-                  :type             web-content-type})
-               web-contents))
-        web-elements-list
-        (map (fn [type-key]
-               (create-web-elements (type-key all-web-contents)
-                                    (name type-key)))
-             [:new :removed :rediscovered :filtered-out])]
-    (doseq [web-elements web-elements-list]
-      (when (not-empty web-elements)
-        (adl/save-web-elements web-elements)
-        (when-not (= (:type (first web-elements)) :filtered-out)
-          (sm/notify-user (reverse web-elements) monitor account-details))))))
+(defn- transform-to-output-format [all-web-contents monitor]
+  (let [monitor-name (:name monitor)
+        datetime (sf/make-datetime)
+        first-monitoring (empty? (:all-db all-web-contents))]
+    (reduce
+     (fn [reduced-contents [type-key web-contents]]
+       (let [type (name type-key)]
+         (assoc reduced-contents
+                type-key
+                (map (fn [web-content]
+                       {:monitor-name     monitor-name
+                        :text             (or (:text web-content) "")
+                        :hrefs            (:hrefs web-content)
+                        :datetime         datetime
+                        :first-monitoring first-monitoring
+                        :type             type})
+                     web-contents))))
+     {}
+     (dissoc all-web-contents :all-db))))
+
+(defn- manage-notify-user [web-elements-list monitor account-details]
+  (let [web-elements-with-href-content
+        {:new
+         (hp/perform-extract-href-content
+          (:new web-elements-list) monitor)
+         :removed
+         ((if (:notify-if-element-removed monitor)
+            #(hp/perform-extract-href-content % monitor)
+            identity)
+          (:removed web-elements-list))
+         :rediscovered
+         ((if (:notify-if-element-rediscovered monitor)
+            #(hp/perform-extract-href-content % monitor)
+            identity)
+          (:rediscovered web-elements-list))}
+        web-elements-list-modified
+        (reduce
+         (fn [reduced-elements-list elements-type]
+           (assoc reduced-elements-list
+                  elements-type
+                  (-> web-elements-with-href-content
+                      elements-type
+                      reverse
+                      doall)))
+         {}
+         [:new :removed :rediscovered])]
+    (doseq [[elements-type web-elements] web-elements-list-modified]
+      (when-not (empty? web-elements)
+        (sm/notify-user elements-type web-elements monitor account-details)))))
 
 (defn- sort-web-contents [web-contents-db web-contents]
   (let [new-web-contents
@@ -104,7 +132,11 @@
       adl/get-web-contents-db
       (sort-web-contents web-contents)
       (manage-post-processing-filtering monitor)
-      (manage-create-output monitor config-account-details)))
+      (transform-to-output-format monitor)
+      (doto
+       (#(doseq [[type web-elements] %]
+           (adl/save-web-elements type web-elements)))
+        (manage-notify-user monitor config-account-details))))
 
 (defn init-organize-regular-monitoring [config-monitors config-account-details]
   (doseq [monitor config-monitors]
