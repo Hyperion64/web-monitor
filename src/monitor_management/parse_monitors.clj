@@ -1,5 +1,5 @@
-(ns processing.parse-input
-  (:require [utils.shared-functions :as sf]
+(ns monitor-management.parse-monitors
+  (:require [fs.access-files :as af]
             [clojure.string :as str]))
 
 (defn- missing-setting-updates [monitor config-settings]
@@ -125,9 +125,7 @@
 
 (defn- include-file-urls [monitor]
   (if-not (nil? (:url-file monitor))
-    (let [file-path (sf/get-file-path
-                     (str "resources/url_files/" (:url-file monitor)))
-          urls (sf/read-in-file file-path line-seq)]
+    (let [urls (af/read-in-url-file (:url-file monitor))]
       (update monitor :url concat urls))
     monitor))
 

@@ -103,7 +103,7 @@ The config.json file contains the following 3 JSON objects:
 
 ### How to start it:
 Start it with the included start-web-monitor.sh script or execute `lein run` if you use leiningen. The program does not use the path relative to the user to access the needed files, it can be run from anywhere. This goes for both the jar file and the leininge project.
-Web-monitor will parse the config before every scraping so it will automatically load updated settings without a restart needed, unless you want to modify the rss port number.
+Web-monitor will parse the config before every scraping so it will automatically load updated settings without a restart needed, unless you want to modify the rss port number. It will also automatically restart continuous monitors which were changed, with the new settings.
 
 ### Bugs
 

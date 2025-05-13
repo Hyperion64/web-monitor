@@ -1,9 +1,10 @@
-(ns processing.manage-monitors
-  (:require [web.scraper                 :as s]
-            [processing.html-parser      :as hp]
-            [db.access-db-logic          :as adl]
-            [notifications.send-messages :as sm]
-            [utils.shared-functions      :as sf]))
+(ns monitor-management.run-monitors
+  (:require [monitor-management.async-monitor-states :as ams]
+            [web.scraper                             :as s]
+            [web.html-parser                         :as hp]
+            [db.access-db-logic                      :as adl]
+            [notifications.send-messages             :as sm]
+            [utils.shared-functions                  :as sf]))
 
 (defn- manage-perform-monitoring [monitor]
   (letfn [(get-html-content [monitor]
@@ -144,27 +145,42 @@
         manage-perform-monitoring
         (manage-process-web-contents monitor config-account-details))))
 
+(defn- continuous-monitor-loop [monitor driver config-account-details frequency
+                                previous-html previous-web-contents]
+  (let [[monitor-state-modification iterate-again]
+        (case (ams/request-monitor-state monitor)
+          "active"                        [nil               true]
+          "awaiting-start-confirmation"   ["confirm-start"   true]
+          "awaiting-stop-confirmation"    ["confirm-stop"    false]
+          "awaiting-restart-confirmation" ["confirm-restart" false]
+          [nil false])]
+    (when monitor-state-modification
+      (ams/modify-continuous-monitor-states monitor monitor-state-modification))
+    (when iterate-again
+      (let [html (s/fetch-driver driver)
+            not-inside? (fn [skip html] (not (some #(= html %) skip)))]
+        (if (not-inside? ["" previous-html] html)
+          (let [adjusted-monitor (assoc monitor :url (first (:url monitor)))
+                web-contents (hp/process-html-string html adjusted-monitor)]
+            (when (not-inside? [[] previous-web-contents] web-contents)
+              (manage-process-web-contents
+               web-contents adjusted-monitor config-account-details))
+            (Thread/sleep frequency)
+            (recur monitor driver config-account-details frequency html
+                   web-contents))
+          (do
+            (Thread/sleep frequency)
+            (recur monitor driver config-account-details frequency html
+                   previous-web-contents)))))))
+
 (defn init-organize-continuous-monitoring
   [config-monitors config-account-details]
   (doseq [monitor config-monitors]
-    (let [frequency    (:frequency            monitor)
-          url          (first (:url           monitor))
+    (let [frequency    (:frequency monitor)
+          url          (first (:url monitor))
           js-load-time (:js-load-time-seconds monitor)
-          browser      (:browser              monitor)
-          driver (s/create-driver url js-load-time browser)
-          not-inside? (fn [skip-elements html-string]
-                        (not (some #(= html-string %) skip-elements)))]
+          browser      (:browser monitor)
+          driver       (s/create-driver url js-load-time browser)]
       (future
-        (loop [previous-html         ""
-               previous-web-contents []]
-          (let [html (s/fetch-driver driver)]
-            (if (not-inside? ["" previous-html] html)
-              (let [adjusted-monitor (assoc monitor :url url)
-                    web-contents (hp/process-html-string html adjusted-monitor)]
-                (when (not-inside? [[] previous-web-contents] web-contents)
-                  (manage-process-web-contents
-                   web-contents adjusted-monitor config-account-details))
-                (Thread/sleep frequency)
-                (recur html web-contents))
-              (do (Thread/sleep frequency)
-                  (recur html previous-web-contents)))))))))
+        (continuous-monitor-loop
+         monitor driver config-account-details frequency "" [])))))

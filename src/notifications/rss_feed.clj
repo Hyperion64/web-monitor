@@ -1,6 +1,7 @@
 (ns notifications.rss-feed
   (:require [utils.shared-functions :as sf]
             [clojure.string :as str]
+            [fs.access-files :as af]
             [clojure.java.io :as io]
             [compojure.core :refer [routes GET]]
             [ring.adapter.jetty :as jetty]
@@ -9,14 +10,14 @@
            [java.time LocalDateTime ZonedDateTime ZoneId]
            [java.time.format DateTimeFormatter]))
 
-(defn- get-rss-feed-path [monitor-name]
-  (sf/get-file-path (str "/data/rss_feeds/" monitor-name ".xml")))
+#_((defn- get-rss-feed-path [monitor-name]
+     (sf/get-file-path (str "/data/rss_feeds/" monitor-name ".xml")))
 
-(defn delete-rss-feed [monitor-name]
-  (.delete (io/file (get-rss-feed-path monitor-name))))
+   (defn delete-rss-feed [monitor-name]
+     (.delete (io/file (get-rss-feed-path monitor-name))))
 
-(defn- save-rss-feed [file-name xml-data]
-  (spit (get-rss-feed-path file-name) xml-data))
+   (defn- save-rss-feed [file-name xml-data]
+     (spit (get-rss-feed-path file-name) xml-data)))
 
 (defn to-rss-date [date-str]
   (let [input-formatter
@@ -73,32 +74,28 @@
              "<title>" name "</title>"
              "<link>" url "</link>"
              "<description></description></channel></rss>")]
-    (save-rss-feed name new-rss-file)))
+    (af/save-rss-feed name new-rss-file)))
 
 (defn process-web-elements [web-elements monitor]
-  (let [folder (File. (sf/get-file-path "/data/rss_feeds/"))
-        files-array (.listFiles folder)
-        feed-names (set (map #(.getName %) files-array))
-        feed-exists (contains? feed-names (str (:name monitor) ".xml"))]
+  (let [feed-exists (af/rss-feed-exists? (:name monitor))]
     (when-not feed-exists (create-new-rss-feed monitor)))
   (let [monitor-name (:name monitor)
         rss-web-elements-string
         (apply str (map #(make-rss-feed-item % monitor-name) web-elements))
         feed-parts
-        (let [path          (get-rss-feed-path monitor-name)
-              existing-feed (slurp path)]
+        (let [existing-feed (af/read-rss-feed monitor-name)]
           (str/split existing-feed #"</description>" 2))
         new-rss-feed
         (str/join "" [(first feed-parts)
                       (str "</description>" rss-web-elements-string)
                       (second feed-parts)])]
-    (save-rss-feed monitor-name new-rss-feed)))
+    (af/save-rss-feed monitor-name new-rss-feed)))
 
 (defn- handler []
   (routes
    (GET "/:monitor-name.xml" [monitor-name]
-     (let [feed-file-path (get-rss-feed-path monitor-name)]
-       (when (.exists (File. feed-file-path))
+     (let [feed-file-path (af/get-rss-feed-path monitor-name)]
+       (when (af/rss-feed-exists? monitor-name)
          (response/file-response
           feed-file-path {:content-type "application/rss+xml"}))))))
 

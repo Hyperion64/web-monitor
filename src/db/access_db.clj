@@ -1,10 +1,10 @@
 (ns db.access-db
-  (:require [utils.shared-functions :as sf]
+  (:require [fs.access-files :as af]
             [next.jdbc :as jdbc]
             [next.jdbc.sql :as sql]))
 
 (def db-spec {:dbtype "sqlite"
-              :dbname (sf/get-file-path "/data/db/web-monitor.db")})
+              :dbname (af/get-db-file-path)})
 
 (defn create-db []
   (jdbc/execute!

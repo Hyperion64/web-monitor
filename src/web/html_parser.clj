@@ -1,6 +1,7 @@
-(ns processing.html-parser
+(ns web.html-parser
   (:require [web.scraper :as s]
             [utils.shared-functions :as sf]
+            [fs.access-files :as af]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as str]
             [clj-time.format :as f]
@@ -357,8 +358,7 @@
   (let [custom-filter-data
         (filter #(= (:type %) "custom") filters)
         filter-paths
-        (map #(sf/get-file-path
-               (str "/resources/filter_scripts/" (:script-name %)))
+        (map #(af/get-filter-script-path (:script-name %))
              custom-filter-data)
         parse-script-output
         (fn [script-output]

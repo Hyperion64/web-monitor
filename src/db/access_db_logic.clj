@@ -1,6 +1,6 @@
 (ns db.access-db-logic
   (:require [db.access-db :as ad]
-            [notifications.rss-feed :as rf]
+            [fs.access-files :as af]
             [utils.shared-functions :as sf]
             [buddy.core.hash :as hash]
             [buddy.core.codecs :as codecs]
@@ -17,8 +17,7 @@
 
 (defn- get-content-selectors-hash [monitor]
   (let [content-selector-keys
-        [:javascript :url :url-range :css-selector :inner-css-selector :filters
-         :text-css-selector :href-css-selector]
+        [:javascript :url :url-range :url-file :css-selector :inner-css-selector :filters :text-css-selectors :href-css-selectors]
         selector-vector
         (filter #(not-empty %)
                 (for [k content-selector-keys]
@@ -44,6 +43,23 @@
           hash/md5
           codecs/bytes->hex
           (subs 0 16)))))
+
+(defn find-modified-monitors [config-monitors]
+  (let [db-monitors (remove-namespaces (ad/get-all-web-monitors))]
+    (filter #(let [matching-db-monitor
+                   (first
+                    (sf/get-maps-with-values db-monitors :name [(:name %)]))
+                   matching-db-monitor-selector-hash
+                   (:content_selectors_hash matching-db-monitor)
+                   config-monitor-content-selectors-hash
+                   (get-content-selectors-hash %)]
+               (println db-monitors)
+               (println config-monitor-content-selectors-hash)
+               (println matching-db-monitor-selector-hash)
+               (and (not (nil? matching-db-monitor-selector-hash))
+                    (not= config-monitor-content-selectors-hash
+                          matching-db-monitor-selector-hash)))
+            config-monitors)))
 
 (defn- select-monitor-by-name [monitor-maps monitor-name]
   (first (filter #(= (:name %) monitor-name) monitor-maps)))
@@ -134,12 +150,12 @@
               u-added-content-selectors)]
         (when has-new-content-selectors
           (ad/delete-web-elements (:name u))
-          (rf/delete-rss-feed     (:name u)))
+          (af/delete-rss-feed     (:name u)))
         (ad/update-web-monitor u-added-active-status)))
     (doseq [d deleted-monitor-names]
       ((ad/delete-web-monitor  d)
        (ad/delete-web-elements d)
-       (rf/delete-rss-feed     d)))))
+       (af/delete-rss-feed     d)))))
 
 (defn get-web-contents-db [monitor]
   (let [web-elements

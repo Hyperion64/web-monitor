@@ -132,6 +132,7 @@
                 "tag": "div",
                 "classes": "product-tile"
             },
+            "continuous": true,
             "frequency": "1m",
             "filters": [
                 {
@@ -158,7 +159,7 @@
                 "tag": "dd",
                 "classes": "catalogue-number"
             },
-            "active": false
+            "active": true
         },
         {
             "name": "bytebytego",
@@ -181,7 +182,7 @@
                 "tag": "div",
                 "classes": "available-content"
             },
-            "active": true
+            "active": false
         }
     ]
 }

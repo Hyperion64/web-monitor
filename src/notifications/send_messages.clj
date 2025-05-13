@@ -1,5 +1,6 @@
 (ns notifications.send-messages
   (:require [utils.shared-functions :as sf]
+            [fs.access-files        :as af]
             [notifications.rss-feed :as rf]
             [clojure.data.json :as json]
             [clj-http.client :as client]
@@ -44,8 +45,7 @@
 
 (defn- send-custom-script-message [json-string message-script-name]
   (let [project-path
-        (sf/get-file-path
-         (str "/resources/notification_scripts/" message-script-name))]
+        (af/get-notification-script-path message-script-name)]
     (sh project-path json-string)))
 
 (defn notify-user [elements-type web-elements monitor account-details]
