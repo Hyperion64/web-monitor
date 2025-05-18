@@ -44,7 +44,7 @@
           "confirm-restart"  [assoc "restart-confirmed"])]
     (swap! continuous-monitor-states assoc-or-dissoc monitor-key state)))
 
-(defn initialize-monitors
+(defn initialize-monitor-states
   [monitors-to-start monitors-to-stop monitors-to-restart]
   (doseq [[monitors action]
           [[monitors-to-start   "initialize-start"]
@@ -53,5 +53,4 @@
     (run! #(modify-continuous-monitor-states % action) monitors)))
 
 (defn request-monitor-state [monitor]
-  (println @continuous-monitor-states)
   ((monitor-to-states-key monitor) @continuous-monitor-states))

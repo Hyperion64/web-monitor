@@ -8,42 +8,27 @@
             [notifications.rss-feed                  :as rf]))
 
 (defn- loop-monitoring-process [previous-clock-maps]
-  (let [config
-        (af/get-config)
-        config-monitors
-        (:monitors config)
-        settings
-        (:settings config)
-        account-details
-        (:account-details config)
-        {:keys [monitors
-                timing]}
-        (sm/prepare-regular-monitor-schedule
-         config-monitors settings account-details previous-clock-maps)
-        {:keys [config-monitors
-                continuous-monitors
+  (let [{:keys [account-details
+                wait-time
+                updated-clock-maps
+                parsed-config-monitors
+                regular-monitors
                 ready-regular-monitors
-                regular-monitors]}
-        monitors
-        {:keys [updated-clock-maps
-                wait-time]}
-        timing
-        {:keys [continuous-monitors-to-start
+                continuous-monitors
+                continuous-monitors-to-start
                 continuous-monitors-to-stop
                 continuous-monitors-to-restart]}
-        (sm/prepare-continuous-monitor-schedule continuous-monitors)]
-    (adl/update-db-monitors config-monitors)
-    (ams/initialize-monitors continuous-monitors-to-start
-                             continuous-monitors-to-stop
-                             continuous-monitors-to-restart)
-    (rm/init-organize-continuous-monitoring
-     continuous-monitors-to-start account-details)
-    (Thread/sleep wait-time)
-    (rm/init-organize-regular-monitoring
-     ready-regular-monitors account-details)
-    (when-not regular-monitors
-      (Thread/sleep
-       (sm/find-minimum-continuous-monitor-frequency continuous-monitors)))
+        (sm/prepare-monitor-schedule (af/get-config) previous-clock-maps)]
+    (adl/update-db-monitors parsed-config-monitors)
+    (ams/initialize-monitor-states continuous-monitors-to-start
+                                   continuous-monitors-to-stop
+                                   continuous-monitors-to-restart)
+    (rm/initialize-monitors ready-regular-monitors
+                            continuous-monitors-to-start
+                            account-details)
+    (sm/pause-core-loop wait-time
+                        regular-monitors
+                        continuous-monitors)
     (recur updated-clock-maps)))
 
 (defn -main []

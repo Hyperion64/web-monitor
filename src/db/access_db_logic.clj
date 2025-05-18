@@ -53,9 +53,6 @@
                    (:content_selectors_hash matching-db-monitor)
                    config-monitor-content-selectors-hash
                    (get-content-selectors-hash %)]
-               (println db-monitors)
-               (println config-monitor-content-selectors-hash)
-               (println matching-db-monitor-selector-hash)
                (and (not (nil? matching-db-monitor-selector-hash))
                     (not= config-monitor-content-selectors-hash
                           matching-db-monitor-selector-hash)))

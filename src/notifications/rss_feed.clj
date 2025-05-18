@@ -1,23 +1,11 @@
 (ns notifications.rss-feed
-  (:require [utils.shared-functions :as sf]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [fs.access-files :as af]
-            [clojure.java.io :as io]
             [compojure.core :refer [routes GET]]
             [ring.adapter.jetty :as jetty]
             [ring.util.response :as response])
-  (:import [java.io File]
-           [java.time LocalDateTime ZonedDateTime ZoneId]
+  (:import [java.time LocalDateTime ZonedDateTime ZoneId]
            [java.time.format DateTimeFormatter]))
-
-#_((defn- get-rss-feed-path [monitor-name]
-     (sf/get-file-path (str "/data/rss_feeds/" monitor-name ".xml")))
-
-   (defn delete-rss-feed [monitor-name]
-     (.delete (io/file (get-rss-feed-path monitor-name))))
-
-   (defn- save-rss-feed [file-name xml-data]
-     (spit (get-rss-feed-path file-name) xml-data)))
 
 (defn to-rss-date [date-str]
   (let [input-formatter
@@ -52,6 +40,8 @@
              (if (= (count split-web-text) 1)
                (conj split-web-text "")
                split-web-text))
+        paragraphed-content
+        (str "<p>" (str/join "</p><p>" (str/split content #"\n{2,}")) "</p>")
         link-element
         (if-not (nil? hrefs) (first (str/split hrefs #"\n")) "")]
     (str "<item>"
@@ -60,7 +50,9 @@
          "<description>Found at " datetime "</description>"
          "<guid>" (str monitor-name "-" (java.util.UUID/randomUUID)) "</guid>"
          "<pubDate>" datetime "</pubDate>"
-         "<content:encoded><![CDATA[<p>" content "</p>]]></content:encoded>"
+         "<content:encoded><![CDATA[<p>"
+         paragraphed-content
+         "</p>]]></content:encoded>"
          "</item>")))
 
 (defn- create-new-rss-feed [monitor]

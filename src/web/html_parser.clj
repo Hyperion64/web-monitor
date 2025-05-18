@@ -24,61 +24,72 @@
                   html-content))
     html-content))
 
-(defn- perform-extraction [html-contents monitor]
-  (letfn [(extract-content
-            [parsed-html-content filter-function extraction-function]
-            (for [html-element (:content parsed-html-content)]
-              (if-not (nil? html-element)
-                (if (filter-function html-element)
-                  (extraction-function html-element)
-                  (extract-content
-                   html-element filter-function extraction-function))
-                "")))
-          (manage-extract-content
-            [html-content selector-key filter-function extraction-function]
-            (let [parsed-html-content
-                  {:content (if-not (empty? (selector-key monitor))
-                              (flatten
-                               (map #(first (parse-html-content % html-content))
-                                    (selector-key monitor)))
-                              [html-content])}]
-              (flatten (extract-content parsed-html-content
-                                        filter-function
-                                        extraction-function))))
-          (make-text-content [html-content]
-            (str/join " " (manage-extract-content
-                           html-content :text-css-selectors string? str/trim)))
-          (make-href-content [html-content]
-            (letfn [(extraction-function [iterated-html-map]
-                      (:href (:attrs iterated-html-map)))
-                    (filter-function [iterated-html-map]
-                      (not (nil? (:href (:attrs iterated-html-map)))))
-                    (format-href-urls [extracted-content]
-                      (cond
-                        (str/starts-with? extracted-content "/")
-                        (let [split-url (str/split (:url monitor) #"/")]
-                          (str (nth split-url 0) "//" (nth split-url 2)
-                               extracted-content))
-                        (str/starts-with? extracted-content "./")
-                        (str (:url monitor) (subs extracted-content 1))
-                        (or (str/starts-with? extracted-content "#")
-                            (str/starts-with? extracted-content "javascript"))
-                        nil
-                        :else
-                        extracted-content))
-                    (remove-multi-newlines [extracted-content]
-                      (str/replace extracted-content #"\n+" "\n"))]
-              (remove-multi-newlines
-               (str/join "\n" (keep format-href-urls
-                                    (manage-extract-content
-                                     html-content
-                                     :href-css-selectors
-                                     filter-function
-                                     extraction-function))))))
-          (make-content-map [html-content]
-            {:text (make-text-content html-content)
-             :hrefs (make-href-content html-content)})]
-    (map make-content-map html-contents)))
+(defn- wrap-and-select-html-content [html-content monitor selector-key]
+  {:content (if-not (empty? (selector-key monitor))
+              (flatten
+               (map #(first (parse-html-content % html-content))
+                    (selector-key monitor)))
+              [html-content])})
+
+(defn- text-extraction [html-content monitor]
+  (letfn [(extract-content [parsed-html-content]
+            (->> parsed-html-content
+                 :content
+                 (keep
+                  (fn [html-element]
+                    (let [inner-extracted-content
+                          (if (string? html-element)
+                            (str/trim html-element)
+                            (extract-content html-element))]
+                      (when-not (str/blank? inner-extracted-content)
+                        (if (= (:tag html-element) :p)
+                          (str "\n\n" inner-extracted-content)
+                          inner-extracted-content)))))
+                 (str/join " ")))
+          (trim-newlines [extracted-content]
+            (str/replace extracted-content #"^\n+|\n+$" ""))]
+    (let [parsed-content (wrap-and-select-html-content
+                          html-content monitor :text-css-selectors)
+          extracted-content (extract-content parsed-content)]
+      (trim-newlines extracted-content))))
+
+(defn- href-extraction [html-content monitor]
+  (letfn [(format-href-url [extracted-content]
+            (cond
+              (str/starts-with? extracted-content "/")
+              (let [split-url (str/split (:url monitor) #"/")]
+                (str (nth split-url 0) "//" (nth split-url 2)
+                     extracted-content))
+              (str/starts-with? extracted-content "./")
+              (str (:url monitor) (subs extracted-content 1))
+              (or (str/starts-with? extracted-content "#")
+                  (str/starts-with? extracted-content "javascript"))
+              nil
+              :else
+              extracted-content))
+          (extract-content [parsed-html-content]
+            (->> parsed-html-content
+                 :content
+                 (keep
+                  (fn [html-element]
+                    (when html-element
+                      (if (:href (:attrs html-element))
+                        (:href (:attrs html-element))
+                        (extract-content html-element)))))
+                 (keep format-href-url)
+                 (str/join "\n")))
+          (remove-multi-newlines [extracted-content]
+            (str/replace extracted-content #"\n+" "\n"))]
+    (let [parsed-content (wrap-and-select-html-content
+                          html-content monitor :href-css-selectors)
+          extracted-content (extract-content parsed-content)]
+      (remove-multi-newlines extracted-content))))
+
+(defn- initialize-extraction [html-contents monitor]
+  (map (fn [html-content]
+         {:text  (text-extraction html-content monitor)
+          :hrefs (href-extraction  html-content monitor)})
+       html-contents))
 
 (defn- extract-number [web-string value-format]
   (let [regexped-filter-value
@@ -195,7 +206,6 @@
             "<"         <
             ">"         >})
          operator-string)
-
         select-filter-function
         (fn [web-string]
           (case value-format-type
@@ -260,7 +270,7 @@
              selected-filter-data)
         get-text
         (fn [html-content selected-filter]
-          (:text (first (perform-extraction
+          (:text (first (initialize-extraction
                          (parse-html-content
                           (:text-css-selector selected-filter)
                           html-content)
@@ -289,70 +299,71 @@
              (str/blank?    hrefs)
              (nil?          hrefs)))))
 
-(defn perform-href-filtering [html-contents monitor]
-  (letfn [(core-perform-href-filtering [href-filters href-html-content]
-            (let [{text-filters false
-                   inner-href-filters true}
-                  (group-by #(= (:type %) "href") href-filters)
-                  parsed-text-contents
-                  (map (fn [text-filter]
-                         {:extracted-contents
-                          (perform-extraction
-                           [{:content (manage-parse-html-contents
-                                       href-html-content text-filter)}]
-                           {:text-css-selectors []
-                            :href-css-selectors []})
-                          :operator        (:operator text-filter)
-                          :filter-value    (:filter-value text-filter)})
-                       text-filters)
-                  filtered-parsed-text-contents
-                  (map #(:text (first
-                                (perform-general-filtering
-                                 (:extracted-contents %)
-                                 [(dissoc % :extracted-contents)])))
-                       parsed-text-contents)
-                  extract-href-content
-                  (fn [css-selector]
-                    (let [scrape-url
-                          (:hrefs (first (perform-extraction
-                                          [{:content
-                                            (manage-parse-html-contents
-                                             href-html-content css-selector)}]
-                                          {:url                (:url monitor)
-                                           :text-css-selectors []
-                                           :href-css-selectors []})))
-                          get-deeper-href-content
-                          (fn []
-                            (scrape-html-contents
-                             (assoc monitor :url scrape-url)))]
-                      (if-not (= scrape-url "")
-                        (core-perform-href-filtering
-                         (:href-filters css-selector)
-                         (get-deeper-href-content))
-                        false)))]
-              (if (or (empty? text-filters)
-                      (every? identity
-                              (map #(not (nil? %))
-                                   filtered-parsed-text-contents)))
-                (or (nil? inner-href-filters)
-                    (every? identity (map extract-href-content
-                                          (or inner-href-filters []))))
-                false)))]
-    (filter
-     (fn [html-content]
-       (if (some #(= (:type %) "href") (:filters monitor))
-         (if (valid-hrefs-for-accessing? html-content)
-           (let [scrape-url
-                 (:hrefs html-content)
-                 href-filters
-                 (:href-filters
-                  (first (filter #(= (:type %) "href") (:filters monitor))))
-                 href-html-content
-                 (scrape-html-contents (assoc monitor :url scrape-url))]
-             (core-perform-href-filtering href-filters href-html-content))
-           false)
-         true))
-     html-contents)))
+(defn perform-href-filtering [href-filters href-html-content monitor]
+  (let [{text-filters false
+         inner-href-filters true}
+        (group-by #(= (:type %) "href") href-filters)
+        parsed-text-contents
+        (map (fn [text-filter]
+               {:extracted-contents
+                (initialize-extraction
+                 [{:content (manage-parse-html-contents
+                             href-html-content text-filter)}]
+                 {:text-css-selectors []
+                  :href-css-selectors []})
+                :operator        (:operator text-filter)
+                :filter-value    (:filter-value text-filter)})
+             text-filters)
+        filtered-parsed-text-contents
+        (map #(:text (first
+                      (perform-general-filtering
+                       (:extracted-contents %)
+                       [(dissoc % :extracted-contents)])))
+             parsed-text-contents)
+        extract-href-content
+        (fn [css-selector]
+          (let [scrape-url
+                (:hrefs (first (initialize-extraction
+                                [{:content
+                                  (manage-parse-html-contents
+                                   href-html-content css-selector)}]
+                                {:url                (:url monitor)
+                                 :text-css-selectors []
+                                 :href-css-selectors []})))
+                get-deeper-href-content
+                (fn []
+                  (scrape-html-contents
+                   (assoc monitor :url scrape-url)))]
+            (if-not (= scrape-url "")
+              (perform-href-filtering
+               (:href-filters css-selector)
+               (get-deeper-href-content) monitor)
+              false)))]
+    (if (or (empty? text-filters)
+            (every? identity
+                    (map #(not (nil? %))
+                         filtered-parsed-text-contents)))
+      (or (nil? inner-href-filters)
+          (every? identity (map extract-href-content
+                                (or inner-href-filters []))))
+      false)))
+
+(defn initialize-href-filtering [html-contents monitor]
+  (filter
+   (fn [html-content]
+     (if (some #(= (:type %) "href") (:filters monitor))
+       (if (valid-hrefs-for-accessing? html-content)
+         (let [scrape-url
+               (:hrefs html-content)
+               href-filters
+               (:href-filters
+                (first (filter #(= (:type %) "href") (:filters monitor))))
+               href-html-content
+               (scrape-html-contents (assoc monitor :url scrape-url))]
+           (perform-href-filtering href-filters href-html-content monitor))
+         false)
+       true))
+   html-contents))
 
 (defn- perform-custom-filtering [web-contents filters]
   (let [custom-filter-data
@@ -388,7 +399,7 @@
                      (first (-> href-monitor
                                 scrape-html-contents
                                 (manage-parse-html-contents href-monitor)
-                                (perform-extraction         href-monitor)))]
+                                (initialize-extraction         href-monitor)))]
                  (assoc html-content
                         :text
                         (str (:text html-content)
@@ -400,7 +411,7 @@
 
 (defn manage-new-web-content-filtering [new-web-contents monitor]
   (-> new-web-contents
-      (perform-href-filtering (assoc monitor :url (first (:url monitor))))
+      (initialize-href-filtering (assoc monitor :url (first (:url monitor))))
       (perform-custom-filtering (:filters monitor))))
 
 (defn process-html-string [fetched-html monitor]
@@ -409,6 +420,6 @@
       hickory/as-hickory
       (manage-parse-html-contents monitor)
       (perform-selected-filtering monitor)
-      (perform-extraction monitor)
+      (initialize-extraction monitor)
       (perform-general-filtering (:filters monitor))
       distinct))

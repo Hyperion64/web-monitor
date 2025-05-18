@@ -139,11 +139,10 @@
            (adl/save-web-elements type web-elements)))
         (manage-notify-user monitor config-account-details))))
 
-(defn init-organize-regular-monitoring [config-monitors config-account-details]
-  (doseq [monitor config-monitors]
-    (-> monitor
-        manage-perform-monitoring
-        (manage-process-web-contents monitor config-account-details))))
+(defn- initialize-regular-monitor [monitor config-account-details]
+  (-> monitor
+      manage-perform-monitoring
+      (manage-process-web-contents monitor config-account-details)))
 
 (defn- continuous-monitor-loop [monitor driver config-account-details frequency
                                 previous-html previous-web-contents]
@@ -173,14 +172,19 @@
             (recur monitor driver config-account-details frequency html
                    previous-web-contents)))))))
 
-(defn init-organize-continuous-monitoring
-  [config-monitors config-account-details]
-  (doseq [monitor config-monitors]
-    (let [frequency    (:frequency monitor)
-          url          (first (:url monitor))
-          js-load-time (:js-load-time-seconds monitor)
-          browser      (:browser monitor)
-          driver       (s/create-driver url js-load-time browser)]
-      (future
-        (continuous-monitor-loop
-         monitor driver config-account-details frequency "" [])))))
+(defn- initialize-continuous-monitor [monitor config-account-details]
+  (let [frequency    (:frequency monitor)
+        url          (first (:url monitor))
+        js-load-time (:js-load-time-seconds monitor)
+        browser      (:browser monitor)
+        driver       (s/create-driver url js-load-time browser)]
+    (future
+      (continuous-monitor-loop
+       monitor driver config-account-details frequency "" []))))
+
+(defn initialize-monitors
+  [regular-monitors continuous-monitors config-account-details]
+  (doseq [continuous-monitor continuous-monitors]
+    (initialize-continuous-monitor continuous-monitor config-account-details))
+  (doseq [regular-monitor regular-monitors]
+    (initialize-regular-monitor regular-monitor config-account-details)))

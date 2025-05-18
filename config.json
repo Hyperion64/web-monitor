@@ -133,7 +133,7 @@
                 "classes": "product-tile"
             },
             "continuous": true,
-            "frequency": "1m",
+            "frequency": "10m",
             "filters": [
                 {
                     "operator": "!contains",
