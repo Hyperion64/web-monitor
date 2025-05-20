@@ -9,8 +9,10 @@
         randomish-str (Long/toString ms-suffix 36)]
     (str log-timestamp "-" randomish-str)))
 
-(defn record-log-element [log-element]
+(defn record-log-element [log-element monitor-name]
   (let [log-string (str "[" (t/make-log-element-timestamp) "]"
+                        " "
+                        "[" monitor-name "]"
                         " "
                         "[" (str/upper-case (:type log-element)) "]"
                         " "

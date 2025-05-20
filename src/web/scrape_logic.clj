@@ -4,21 +4,22 @@
             [web.html-parser           :as hp]
             [clojure.string            :as str]))
 
-(defn- manage-scrape [scrape-data]
-  (let [scrape-data-type (:type scrape-data)
+(defn- manage-scrape [scrape-data monitor]
+  (let [monitor-name (:name monitor)
+        scrape-data-type (:type scrape-data)
         scrape-data-content (:content scrape-data)]
     (case scrape-data-type
       "page-source"
       scrape-data-content
       "error"
-      (do (cl/record-log-element scrape-data)
+      (do (cl/record-log-element scrape-data monitor-name)
           ""))))
 
 (defn- initialize-regular-scrape [monitor]
-  (manage-scrape (s/regular-scrape monitor)))
+  (manage-scrape (s/regular-scrape monitor) monitor))
 
-(defn- initialize-continuous-scrape [driver]
-  (manage-scrape (s/fetch-driver driver)))
+(defn- initialize-continuous-scrape [driver monitor]
+  (manage-scrape (s/fetch-driver driver) monitor))
 
 (defn- process-html-string [scrape-content monitor]
   (let [parsed-html
@@ -87,7 +88,7 @@
 (defn manage-continuous-scrape
   [driver monitor previous-html previous-web-contents]
   (let [html
-        (initialize-continuous-scrape driver)
+        (initialize-continuous-scrape driver monitor)
         html-is-new
         (not (or (= html previous-html)
                  (= html "")))
