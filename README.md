@@ -24,7 +24,7 @@ Receive said notifications via matrix, rss, std output, pipe it into your own sc
   - db: contains the SQLite database.
   - rss_feeds: contains all rss-feed xml files.
   - log_files: For each session that produces a warning or error, a .log file is created. Each log entry follows the format:
-  `[timestamp in format yyyy-MM-dd HH:mm:ss] [monitor name] [WARNING or ERROR] message content`
+  `[timestamp in format yyyy-MM-dd HH:mm:ss] [monitor name] [WARNING or ERROR] content`
 
 * resources:
   - filter_stripts: script to filter scraped data.
