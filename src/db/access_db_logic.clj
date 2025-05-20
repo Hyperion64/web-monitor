@@ -2,6 +2,7 @@
   (:require [db.access-db :as ad]
             [fs.access-files :as af]
             [utils.shared-functions :as sf]
+            [utils.timestamps :as t]
             [buddy.core.hash :as hash]
             [buddy.core.codecs :as codecs]
             [db.access-db-logic :as adl]))
@@ -127,7 +128,7 @@
       (ad/insert-web-monitor
        {:name                   (:name n)
         :active                 (if (:active n) 1 0)
-        :datetime               (sf/make-datetime)
+        :datetime               (t/make-datetime)
         :content_selectors_hash (get-content-selectors-hash n)}))
     (doseq [u monitor-updates]
       (let [db-monitor

@@ -1,9 +1,5 @@
 (ns utils.shared-functions
-  (:require [clojure.data.json :as json]
-            [java-time.api :as jt]))
-
-(defn make-datetime []
-  (jt/format (jt/formatter "dd.MM.yyyy HH:mm:ss") (jt/zoned-date-time)))
+  (:require [clojure.data.json :as json]))
 
 (defn ordered-complement [coll-1 coll-2]
   (filter (complement (set coll-2)) coll-1))

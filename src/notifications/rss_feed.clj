@@ -1,23 +1,10 @@
 (ns notifications.rss-feed
   (:require [clojure.string :as str]
             [fs.access-files :as af]
+            [utils.timestamps :as t]
             [compojure.core :refer [routes GET]]
             [ring.adapter.jetty :as jetty]
-            [ring.util.response :as response])
-  (:import [java.time LocalDateTime ZonedDateTime ZoneId]
-           [java.time.format DateTimeFormatter]))
-
-(defn to-rss-date [date-str]
-  (let [input-formatter
-        (DateTimeFormatter/ofPattern "dd.MM.yyyy HH:mm:ss")
-        rfc822-formatter
-        (DateTimeFormatter/ofPattern
-         "EEE, dd MMM yyyy HH:mm:ss Z" java.util.Locale/ENGLISH)
-        local-dt
-        (LocalDateTime/parse date-str input-formatter)
-        zoned-dt
-        (ZonedDateTime/of local-dt (ZoneId/systemDefault))]
-    (.format zoned-dt rfc822-formatter)))
+            [ring.util.response :as response]))
 
 (defn- make-rss-feed-item [web-element monitor-name]
   (let [web-text
@@ -25,7 +12,7 @@
         hrefs
         (:hrefs web-element)
         datetime
-        (to-rss-date (:datetime web-element))
+        (t/timestamp-to-rss-format (:datetime web-element))
         sanitize-text
         (fn [text]
           (-> text

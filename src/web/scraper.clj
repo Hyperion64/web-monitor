@@ -23,19 +23,22 @@
     driver))
 
 (defn fetch-driver [driver]
-  (.getPageSource driver))
+  (try {:type "page-source"
+        :content (.getPageSource driver)}
+       (catch Exception exception
+         {:type "error"
+          :content (.getMessage exception)})))
 
-(defn- fetch-js-page-content [url js-load-time browser]
-  (let [driver (create-driver url js-load-time browser)
-        page-content (fetch-driver driver)]
-    (.quit driver)
-    page-content))
+(defn quit-driver [driver]
+  (.quit driver))
 
-(defn fetch-html-string [monitor]
+(defn regular-scrape [monitor]
   (let [url          (:url monitor)
         js-load-time (:js-load-time-seconds monitor)
         browser      (:browser monitor)]
     (if-not (= browser "none")
-      (fetch-js-page-content url js-load-time browser)
+      (let [driver       (create-driver url js-load-time browser)
+            page-content (fetch-driver driver)]
+        (quit-driver driver)
+        page-content)
       (:body (client/get url)))))
-

@@ -1,6 +1,5 @@
 (ns web.html-parser
-  (:require [web.scraper :as s]
-            [utils.shared-functions :as sf]
+  (:require [utils.shared-functions :as sf]
             [fs.access-files :as af]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as str]
@@ -85,7 +84,7 @@
           extracted-content (extract-content parsed-content)]
       (remove-multi-newlines extracted-content))))
 
-(defn- initialize-extraction [html-contents monitor]
+(defn initialize-extraction [html-contents monitor]
   (map (fn [html-content]
          {:text  (text-extraction html-content monitor)
           :hrefs (href-extraction  html-content monitor)})
@@ -242,7 +241,7 @@
                     selected-filters))]
     (filter apply-all-filters html-contents)))
 
-(defn- perform-general-filtering [html-contents filters]
+(defn perform-general-filtering [html-contents filters]
   (let [selected-filter-data
         (filter #(= (:type %) "general") filters)
         selected-filter-functions
@@ -254,7 +253,7 @@
           (:text html-content))]
     (perform-filtering-core html-contents selected-filter-functions get-text)))
 
-(defn- perform-selected-filtering [html-contents monitor]
+(defn perform-selected-filtering [html-contents monitor]
   (let [css-selector-filters
         (filter #(= (:type %) "select") (:filters monitor))
         selected-filter-data
@@ -280,10 +279,10 @@
     (perform-filtering-core
      html-contents selected-filter-functions get-text)))
 
-(defn- scrape-html-contents [monitor]
-  (hickory/as-hickory (hickory/parse (s/fetch-html-string monitor))))
+(defn hickory-parse-html-contents [href-string]
+  (hickory/as-hickory (hickory/parse href-string)))
 
-(defn- manage-parse-html-contents [html-contents monitor]
+(defn initialize-parse-html-contents [html-contents monitor]
   (let [parsed-html-contents
         (parse-html-content (:css-selector monitor) html-contents)
         parsed-inner-html-contents
@@ -293,79 +292,7 @@
           parsed-html-contents)]
     parsed-inner-html-contents))
 
-(defn- valid-hrefs-for-accessing? [html-content]
-  (let [hrefs (:hrefs html-content)]
-    (not (or (str/includes? hrefs "\n")
-             (str/blank?    hrefs)
-             (nil?          hrefs)))))
-
-(defn perform-href-filtering [href-filters href-html-content monitor]
-  (let [{text-filters false
-         inner-href-filters true}
-        (group-by #(= (:type %) "href") href-filters)
-        parsed-text-contents
-        (map (fn [text-filter]
-               {:extracted-contents
-                (initialize-extraction
-                 [{:content (manage-parse-html-contents
-                             href-html-content text-filter)}]
-                 {:text-css-selectors []
-                  :href-css-selectors []})
-                :operator        (:operator text-filter)
-                :filter-value    (:filter-value text-filter)})
-             text-filters)
-        filtered-parsed-text-contents
-        (map #(:text (first
-                      (perform-general-filtering
-                       (:extracted-contents %)
-                       [(dissoc % :extracted-contents)])))
-             parsed-text-contents)
-        extract-href-content
-        (fn [css-selector]
-          (let [scrape-url
-                (:hrefs (first (initialize-extraction
-                                [{:content
-                                  (manage-parse-html-contents
-                                   href-html-content css-selector)}]
-                                {:url                (:url monitor)
-                                 :text-css-selectors []
-                                 :href-css-selectors []})))
-                get-deeper-href-content
-                (fn []
-                  (scrape-html-contents
-                   (assoc monitor :url scrape-url)))]
-            (if-not (= scrape-url "")
-              (perform-href-filtering
-               (:href-filters css-selector)
-               (get-deeper-href-content) monitor)
-              false)))]
-    (if (or (empty? text-filters)
-            (every? identity
-                    (map #(not (nil? %))
-                         filtered-parsed-text-contents)))
-      (or (nil? inner-href-filters)
-          (every? identity (map extract-href-content
-                                (or inner-href-filters []))))
-      false)))
-
-(defn initialize-href-filtering [html-contents monitor]
-  (filter
-   (fn [html-content]
-     (if (some #(= (:type %) "href") (:filters monitor))
-       (if (valid-hrefs-for-accessing? html-content)
-         (let [scrape-url
-               (:hrefs html-content)
-               href-filters
-               (:href-filters
-                (first (filter #(= (:type %) "href") (:filters monitor))))
-               href-html-content
-               (scrape-html-contents (assoc monitor :url scrape-url))]
-           (perform-href-filtering href-filters href-html-content monitor))
-         false)
-       true))
-   html-contents))
-
-(defn- perform-custom-filtering [web-contents filters]
+(defn perform-custom-filtering [web-contents filters]
   (let [custom-filter-data
         (filter #(= (:type %) "custom") filters)
         filter-paths
@@ -385,40 +312,8 @@
           (sf/make-json-string (:text html-content)))]
     (perform-filtering-core web-contents filter-functions get-text)))
 
-(defn perform-extract-href-content [html-contents monitor]
-  (let [href-addition (:href-addition monitor)]
-    (if-not (empty? href-addition)
-      (map (fn [html-content]
-             (if (valid-hrefs-for-accessing? html-content)
-               (let [href-monitor
-                     {:url                  (:hrefs html-content)
-                      :css-selector         href-addition
-                      :js-load-time-seconds (:js-load-time-seconds monitor)
-                      :browser              (:browser monitor)}
-                     href-html-content
-                     (first (-> href-monitor
-                                scrape-html-contents
-                                (manage-parse-html-contents href-monitor)
-                                (initialize-extraction         href-monitor)))]
-                 (assoc html-content
-                        :text
-                        (str (:text html-content)
-                             "\n\n\n"
-                             (:text href-html-content))))
-               html-content))
-           html-contents)
-      html-contents)))
-
-(defn manage-new-web-content-filtering [new-web-contents monitor]
-  (-> new-web-contents
-      (initialize-href-filtering (assoc monitor :url (first (:url monitor))))
-      (perform-custom-filtering (:filters monitor))))
-
-(defn process-html-string [fetched-html monitor]
-  (-> fetched-html
-      hickory/parse
-      hickory/as-hickory
-      (manage-parse-html-contents monitor)
+(defn process-parsed-html [parsed-html monitor]
+  (-> parsed-html
       (perform-selected-filtering monitor)
       (initialize-extraction monitor)
       (perform-general-filtering (:filters monitor))

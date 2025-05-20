@@ -1,60 +1,15 @@
 (ns monitor-management.run-monitors
   (:require [monitor-management.async-monitor-states :as ams]
+            [web.scrape-logic                        :as sl]
             [web.scraper                             :as s]
-            [web.html-parser                         :as hp]
             [db.access-db-logic                      :as adl]
             [notifications.send-messages             :as sm]
-            [utils.shared-functions                  :as sf]))
-
-(defn- manage-perform-monitoring [monitor]
-  (letfn [(get-html-content [monitor]
-            (-> monitor
-                s/fetch-html-string
-                (hp/process-html-string monitor)))
-          (iterate-monitoring-url-range
-            [first-url-part second-url-part iterator
-             tolerance max-tolerance max-scrapes]
-            (let [iterated-url
-                  (str first-url-part iterator second-url-part)
-                  monitor-with-iterated-url
-                  (assoc monitor :url iterated-url)
-                  iterated-html-content
-                  (get-html-content monitor-with-iterated-url)]
-              (concat iterated-html-content
-                      (cond
-                        (= max-scrapes 0)
-                        []
-                        (not-empty iterated-html-content)
-                        (iterate-monitoring-url-range
-                         first-url-part second-url-part (+ iterator 1)
-                         max-tolerance max-tolerance (- max-scrapes 1))
-                        (not (= tolerance -1))
-                        (iterate-monitoring-url-range
-                         first-url-part second-url-part (+ iterator 1)
-                         (- tolerance 1) max-tolerance max-scrapes)
-                        :else
-                        []))))
-          (manage-iterate-monitoring-url-range []
-            (let [url-range (:url-range monitor)]
-              (if-not (empty? url-range)
-                (let [first-url-part  (nth (:url-parts url-range) 0)
-                      second-url-part (nth (:url-parts url-range) 1)
-                      iterator        (nth (:url-parts url-range) 2)
-                      tolerance   (:tolerance   url-range)
-                      max-scrapes (:max-scrapes url-range)]
-                  (iterate-monitoring-url-range
-                   first-url-part second-url-part iterator
-                   tolerance tolerance max-scrapes))
-                [])))]
-    (distinct (concat
-               (flatten
-                (map #(get-html-content (assoc monitor :url %))
-                     (:url monitor)))
-               (manage-iterate-monitoring-url-range)))))
+            [utils.shared-functions                  :as sf]
+            [utils.timestamps                        :as t]))
 
 (defn- transform-to-output-format [all-web-contents monitor]
   (let [monitor-name (:name monitor)
-        datetime (sf/make-datetime)
+        datetime (t/make-datetime)
         first-monitoring (empty? (:all-db all-web-contents))]
     (reduce
      (fn [reduced-contents [type-key web-contents]]
@@ -75,16 +30,16 @@
 (defn- manage-notify-user [web-elements-list monitor account-details]
   (let [web-elements-with-href-content
         {:new
-         (hp/perform-extract-href-content
+         (sl/perform-extract-href-content
           (:new web-elements-list) monitor)
          :removed
          ((if (:notify-if-element-removed monitor)
-            #(hp/perform-extract-href-content % monitor)
+            #(sl/perform-extract-href-content % monitor)
             identity)
           (:removed web-elements-list))
          :rediscovered
          ((if (:notify-if-element-rediscovered monitor)
-            #(hp/perform-extract-href-content % monitor)
+            #(sl/perform-extract-href-content % monitor)
             identity)
           (:rediscovered web-elements-list))}
         web-elements-list-modified
@@ -121,7 +76,7 @@
   (let [new-web-contents
         (:new sorted-web-contents)
         filtered-new-web-contents
-        (hp/manage-new-web-content-filtering new-web-contents monitor)
+        (sl/manage-new-web-content-filtering new-web-contents monitor)
         filtered-out-new-web-contents
         (sf/ordered-complement new-web-contents filtered-new-web-contents)]
     (assoc sorted-web-contents
@@ -141,7 +96,7 @@
 
 (defn- initialize-regular-monitor [monitor config-account-details]
   (-> monitor
-      manage-perform-monitoring
+      sl/manage-regular-scrape
       (manage-process-web-contents monitor config-account-details)))
 
 (defn- continuous-monitor-loop [monitor driver config-account-details frequency
@@ -155,13 +110,15 @@
           [nil false])]
     (when monitor-state-modification
       (ams/modify-continuous-monitor-states monitor monitor-state-modification))
-    (when iterate-again
-      (let [html (s/fetch-driver driver)
-            not-inside? (fn [skip html] (not (some #(= html %) skip)))]
-        (if (not-inside? ["" previous-html] html)
-          (let [adjusted-monitor (assoc monitor :url (first (:url monitor)))
-                web-contents (hp/process-html-string html adjusted-monitor)]
-            (when (not-inside? [[] previous-web-contents] web-contents)
+    (if iterate-again
+      (let [adjusted-monitor
+            (assoc monitor :url (first (:url monitor)))
+            {:keys [html html-is-new web-contents web-contents-are-new]}
+            (sl/manage-continuous-scrape
+             driver adjusted-monitor previous-html previous-web-contents)]
+        (if html-is-new
+          (do
+            (when web-contents-are-new
               (manage-process-web-contents
                web-contents adjusted-monitor config-account-details))
             (Thread/sleep frequency)
@@ -170,7 +127,8 @@
           (do
             (Thread/sleep frequency)
             (recur monitor driver config-account-details frequency html
-                   previous-web-contents)))))))
+                   previous-web-contents))))
+      (s/quit-driver driver))))
 
 (defn- initialize-continuous-monitor [monitor config-account-details]
   (let [frequency    (:frequency monitor)

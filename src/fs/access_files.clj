@@ -2,8 +2,7 @@
   (:require [clojure.java.io   :as io]
             [clojure.string    :as str]
             [clojure.data.json :as json])
-  (:import [java.io File]
-           [java.nio.file Paths]))
+  (:import [java.io File]))
 
 ;private
 (defn- get-relative-dir-root-path []
@@ -77,3 +76,9 @@
 (defn read-in-url-file [url-file-name]
   (with-open [reader (io/reader (get-url-files-path url-file-name))]
     (doall (line-seq reader))))
+
+;log-files
+(defn append-log-element [log-string log-file-id]
+  (spit (get-file-path (str "/data/log_files/" log-file-id ".log"))
+        (str log-string "\n")
+        :append true))

@@ -20,11 +20,17 @@ Receive said notifications via matrix, rss, std output, pipe it into your own sc
 
 * config.json: here you configure the web-monitor, a detailed explanation follows in **Setting up config.json**.
 
-* data: contains two folders:
+* data:
   - db: contains the SQLite database.
   - rss_feeds: contains all rss-feed xml files.
+  - log_files: For each session that produces a warning or error, a .log file is created. Each log entry follows the format:
 
-* notification_scripts: put your custom notifications scripts here as described below.
+  `[timestamp in format yyyy-MM-dd HH:mm:ss] [monitor name] [WARNING or ERROR] message content`
+
+* resources:
+  - filter_stripts: script to filter scraped data.
+  - notification_scripts: script to pass scraped data to.
+  - url_files: list of urls to scrape for a given monitor.
 
 ### Setting up config.json:
 The config.json file contains the following 3 JSON objects:
