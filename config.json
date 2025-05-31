@@ -134,6 +134,12 @@
             },
             "continuous": true,
             "frequency": "10m",
+            "web-operations": [
+                {
+                    "type": "scroll",
+                    "scrolls": 0
+                }
+            ],
             "filters": [
                 {
                     "operator": "!contains",
@@ -155,11 +161,101 @@
                     "artwork"
                 ]
             },
-            "href-addition": {
+            "href-additions": {
                 "tag": "dd",
                 "classes": "catalogue-number"
             },
             "active": true
+        },
+        {
+            "name": "Autechre-releases2",
+            "url": "https://autechre.warp.net/AE_2022-",
+            "css-selector": {
+                "tag": "div",
+                "classes": "product-tile"
+            },
+            "continuous": true,
+            "frequency": "10m",
+            "web-operations": [
+                {
+                    "type": "click",
+                    "css-selector": {
+                        "tag": "a",
+                        "classes": "nav-link-releases"
+                    }
+                },
+                {
+                    "type": "scroll",
+                    "scrolls": 0
+                }
+            ],
+            "text-css-selectors": {
+                "tag": "dd",
+                "classes": "release-title"
+            },
+            "href-css-selectors": {
+                "tag": "a",
+                "classes": [
+                    "main-product-image",
+                    "artwork"
+                ]
+            },
+            "href-additions": {
+                "tag": "dd",
+                "classes": "catalogue-number"
+            },
+            "active": false
+        },
+        {
+            "name": "Schokolade",
+            "url": "https://schokolade.shop/Pralinen-Trueffel/",
+            "css-selector": {
+                "tag": "div",
+                "classes": "product-info"
+            },
+            "continuous": true,
+            "frequency": "10m",
+            "web-operations": [
+                {
+                    "type": "click",
+                    "css-selector": {
+                        "tag": "button",
+                        "classes": "eightworks-cookie-consent-plus-deny-button"
+                    }
+                },
+                {
+                    "type": "wait",
+                    "time": 1
+                },
+                {
+                    "type": "enter-text",
+                    "css-selector": {
+                        "tag": "input",
+                        "ids": "header-main-search-input"
+                    },
+                    "text": "Chocolat MADAGASCAR",
+                    "submit": false
+                },
+                {
+                    "type": "wait",
+                    "time": 1
+                },
+                {
+                    "type": "click",
+                    "css-selector": {
+                        "tag": "button",
+                        "classes": "header-close-btn"
+                    }
+                },
+                {
+                    "type": "click",
+                    "css-selector": {
+                        "tag": "button",
+                        "classes": "header-search-btn"
+                    }
+                }
+            ],
+            "active": false
         },
         {
             "name": "bytebytego",

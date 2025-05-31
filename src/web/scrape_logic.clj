@@ -4,6 +4,12 @@
             [web.html-parser           :as hp]
             [clojure.string            :as str]))
 
+(defn quit-driver [driver]
+  (s/quit-driver driver))
+
+(defn create-driver [url js-load-time-seconds browser web-operations]
+  (s/create-driver url js-load-time-seconds browser web-operations))
+
 (defn- manage-scrape [scrape-data monitor]
   (let [monitor-name (:name monitor)
         scrape-data-type (:type scrape-data)
@@ -36,7 +42,8 @@
            {:type
             "warning"
             :content
-            (str "Selectors did not find any elements in " (:name monitor))})
+            (str "Selectors did not find any elements in " (:name monitor))}
+           (:name monitor))
           []))))
 
 (defn manage-regular-scrape [monitor]

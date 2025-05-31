@@ -18,7 +18,8 @@
               :url-range                      []
               :filters                        []
               :text-css-selectors             []
-              :href-css-selectors             []})
+              :href-css-selectors             []
+              :web-operations                 []})
         apply-settings
         (fn [reduced-monitor [setting-key setting-value]]
           (if (nil? (setting-key reduced-monitor))
@@ -49,6 +50,11 @@
               reduced-monitor))
           monitor
           [:url :text-css-selectors :href-css-selectors]))
+
+(defn- get-first-url-if-continuous [monitor]
+  (if (:continuous monitor)
+    (update monitor :url first)
+    monitor))
 
 (defn- string-vector-to-set-updates [monitor]
   (reduce (fn [reduced-monitor param]
@@ -84,6 +90,56 @@
                              notification-selector-value))))))
    monitor
    notification-selector-parameters))
+
+(defn- format-css-selectors [monitor]
+  (let [css-selector-keys
+        #{:css-selector :text-css-selector :href-css-selector :href-addition}
+        css-selector-array-keys
+        #{:text-css-selectors :href-css-selectors}]
+    (letfn [(if-string-make-vector [selector-element]
+              (if (string? selector-element)
+                [selector-element]
+                selector-element))
+            (create-selector-update [iterated-value]
+              (cond-> iterated-value
+                (contains? iterated-value :classes)
+                (update :classes if-string-make-vector)
+                (contains? iterated-value :ids)
+                (update :ids if-string-make-vector)))
+            (perform-formatting [path iterated-key iterated-value]
+              (let [selector-update (create-selector-update iterated-value)]
+                (if (not= iterated-value selector-update)
+                  [[(conj path iterated-key) selector-update]]
+                  [])))
+            (perform-coll-formatting [path iterated-key iterated-value]
+              (let [selector-update-coll
+                    (map create-selector-update iterated-value)]
+                (if (not= iterated-value selector-update-coll)
+                  [[(conj path iterated-key) selector-update-coll]]
+                  [])))
+            (css-selector-updates [path current-monitor-part]
+              (cond
+                (map? current-monitor-part)
+                (mapcat (fn [[iterated-key iterated-value]]
+                          (cond (contains? css-selector-keys iterated-key)
+                                (perform-formatting
+                                 path iterated-key iterated-value)
+                                (contains? css-selector-array-keys iterated-key)
+                                (perform-coll-formatting
+                                 path iterated-key iterated-value)
+                                :else
+                                (css-selector-updates
+                                 (conj path iterated-key) iterated-value)))
+                        current-monitor-part)
+                (coll? current-monitor-part)
+                (mapcat (fn [idx coll-element]
+                          (css-selector-updates (conj path idx) coll-element))
+                        (range) current-monitor-part)
+                :else []))]
+      (reduce (fn [reduced-monitor [path updated-css-selector]]
+                (assoc-in reduced-monitor path updated-css-selector))
+              monitor
+              (css-selector-updates [] monitor)))))
 
 (defn- add-types-to-filters [monitor]
   (assoc monitor
@@ -154,9 +210,11 @@
             (missing-setting-updates config-settings)
             bool-to-coll-updates
             string-or-map-to-vector-updates
+            get-first-url-if-continuous
             string-vector-to-set-updates
             report-first-rss-updates
             remove-irrelevant-details-updates
+            format-css-selectors
             add-types-to-filters
             add-infinite-url-range-limit
             include-file-urls

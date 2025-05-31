@@ -75,9 +75,9 @@
    db-spec :web_elements
    {:monitor_name monitor-name}))
 
-(defn delete-web-element [monitor-name element]
-  (sql/delete!
-   db-spec :web_elements
-   {:monitor_name monitor-name
-    :text         (:text  element)
-    :hrefs        (:hrefs element)}))
+#_(defn delete-web-element [monitor-name element]
+    (sql/delete!
+     db-spec :web_elements
+     {:monitor_name monitor-name
+      :text         (:text  element)
+      :hrefs        (:hrefs element)}))

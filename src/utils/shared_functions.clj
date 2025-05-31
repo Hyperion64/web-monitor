@@ -7,11 +7,6 @@
 (defn ordered-conjunction [coll-1 coll-2]
   (filter (set coll-2) coll-1))
 
-(defn map-maybe-collection [f maybe-map]
-  (if (coll? maybe-map)
-    (map f maybe-map)
-    [(f maybe-map)]))
-
 (defn get-maps-with-values [maps-to-filter filter-key filter-values]
   (filter #(contains? (set filter-values) (filter-key %)) maps-to-filter))
 

@@ -18,7 +18,8 @@
 
 (defn- get-content-selectors-hash [monitor]
   (let [content-selector-keys
-        [:javascript :url :url-range :url-file :css-selector :inner-css-selector :filters :text-css-selectors :href-css-selectors]
+        [:javascript :url :url-range :url-file :css-selector :inner-css-selector
+         :web-operations :filters :text-css-selectors :href-css-selectors]
         selector-vector
         (filter #(not-empty %)
                 (for [k content-selector-keys]

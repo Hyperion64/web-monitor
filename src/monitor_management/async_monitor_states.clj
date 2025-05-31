@@ -36,12 +36,12 @@
         (monitor-to-states-key monitor)
         [assoc-or-dissoc state]
         (case action
-          "initialize-start" [assoc "awaiting-start-confirmation"]
-          "initialize-stop"  [assoc "awaiting-stop-confirmation"]
-          "initialize-restart" [assoc "awaiting-restart-confirmation"]
-          "confirm-start"    [assoc "active"]
-          "confirm-stop"     [dissoc nil]
-          "confirm-restart"  [assoc "restart-confirmed"])]
+          "initialize-start"   [assoc  "awaiting-start-confirmation"]
+          "initialize-stop"    [assoc  "awaiting-stop-confirmation"]
+          "initialize-restart" [assoc  "awaiting-restart-confirmation"]
+          "confirm-start"      [assoc  "active"]
+          "confirm-stop"       [dissoc nil]
+          "confirm-restart"    [assoc  "restart-confirmed"])]
     (swap! continuous-monitor-states assoc-or-dissoc monitor-key state)))
 
 (defn initialize-monitor-states

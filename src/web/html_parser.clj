@@ -1,20 +1,20 @@
 (ns web.html-parser
   (:require [utils.shared-functions :as sf]
-            [fs.access-files :as af]
-            [clojure.java.shell :refer [sh]]
-            [clojure.string :as str]
-            [clj-time.format :as f]
-            [clj-time.core :as t]
-            [hickory.core :as hickory]
-            [hickory.select :as sel]))
+            [fs.access-files        :as af]
+            [clojure.java.shell     :refer [sh]]
+            [clojure.string         :as str]
+            [clj-time.format        :as f]
+            [clj-time.core          :as t]
+            [hickory.core           :as hickory]
+            [hickory.select         :as sel]))
 
 (defn- parse-html-content [css-selector html-content]
   (if-not (or (nil? css-selector) (empty? css-selector))
     (let [hickory-select-functions
           (flatten (for [[k f]
                          {:tag     sel/tag
-                          :classes #(sf/map-maybe-collection sel/class %)
-                          :ids     #(sf/map-maybe-collection sel/id %)
+                          :classes #(map sel/class %)
+                          :ids     #(map sel/id %)
                           :type    sel/node-type}
                          :let  [selector (k css-selector)]
                          :when (some? selector)]
@@ -257,13 +257,12 @@
   (let [css-selector-filters
         (filter #(= (:type %) "select") (:filters monitor))
         selected-filter-data
-        (sf/map-maybe-collection
-         (fn [css-selector-filter]
-           {:function-params
-            (select-keys css-selector-filter [:operator :filter-value])
-            :text-css-selector
-            (:text-css-selector css-selector-filter)})
-         css-selector-filters)
+        (map (fn [css-selector-filter]
+               {:function-params
+                (select-keys css-selector-filter [:operator :filter-value])
+                :text-css-selector
+                (:text-css-selector css-selector-filter)})
+             css-selector-filters)
         selected-filter-functions
         (map #(assoc % :function (make-filter-function (:function-params %)))
              selected-filter-data)

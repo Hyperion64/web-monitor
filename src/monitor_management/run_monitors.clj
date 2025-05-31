@@ -1,7 +1,6 @@
 (ns monitor-management.run-monitors
   (:require [monitor-management.async-monitor-states :as ams]
             [web.scrape-logic                        :as sl]
-            [web.scraper                             :as s]
             [db.access-db-logic                      :as adl]
             [notifications.send-messages             :as sm]
             [utils.shared-functions                  :as sf]
@@ -111,16 +110,14 @@
     (when monitor-state-modification
       (ams/modify-continuous-monitor-states monitor monitor-state-modification))
     (if iterate-again
-      (let [adjusted-monitor
-            (assoc monitor :url (first (:url monitor)))
-            {:keys [html html-is-new web-contents web-contents-are-new]}
+      (let [{:keys [html html-is-new web-contents web-contents-are-new]}
             (sl/manage-continuous-scrape
-             driver adjusted-monitor previous-html previous-web-contents)]
+             driver monitor previous-html previous-web-contents)]
         (if html-is-new
           (do
             (when web-contents-are-new
               (manage-process-web-contents
-               web-contents adjusted-monitor config-account-details))
+               web-contents monitor config-account-details))
             (Thread/sleep frequency)
             (recur monitor driver config-account-details frequency html
                    web-contents))
@@ -128,17 +125,15 @@
             (Thread/sleep frequency)
             (recur monitor driver config-account-details frequency html
                    previous-web-contents))))
-      (s/quit-driver driver))))
+      (sl/quit-driver driver))))
 
 (defn- initialize-continuous-monitor [monitor config-account-details]
-  (let [frequency    (:frequency monitor)
-        url          (first (:url monitor))
-        js-load-time (:js-load-time-seconds monitor)
-        browser      (:browser monitor)
-        driver       (s/create-driver url js-load-time browser)]
-    (future
-      (continuous-monitor-loop
-       monitor driver config-account-details frequency "" []))))
+  (let [{:keys [frequency url js-load-time-seconds browser web-operations]}
+        monitor
+        driver
+        (sl/create-driver url js-load-time-seconds browser web-operations)]
+    (future (continuous-monitor-loop
+             monitor driver config-account-details frequency "" []))))
 
 (defn initialize-monitors
   [regular-monitors continuous-monitors config-account-details]
