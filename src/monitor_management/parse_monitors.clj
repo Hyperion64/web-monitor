@@ -51,11 +51,6 @@
           monitor
           [:url :text-css-selectors :href-css-selectors]))
 
-(defn- get-first-url-if-continuous [monitor]
-  (if (:continuous monitor)
-    (update monitor :url first)
-    monitor))
-
 (defn- string-vector-to-set-updates [monitor]
   (reduce (fn [reduced-monitor param]
             (cond
@@ -80,16 +75,15 @@
     monitor))
 
 (defn- remove-irrelevant-details-updates [monitor]
-  (reduce
-   (fn [reduced-monitor param]
-     (assoc reduced-monitor param
-            (set (remove nil?
-                         (for [notification-selector-value (param monitor)]
-                           (when (contains? (:messengers monitor)
-                                            notification-selector-value)
-                             notification-selector-value))))))
-   monitor
-   notification-selector-parameters))
+  (let [messengers (:messengers monitor)]
+    (reduce
+     (fn [reduced-monitor param]
+       (update reduced-monitor
+               param
+               (fn [notification-selector-values]
+                 (set (filter messengers notification-selector-values)))))
+     monitor
+     notification-selector-parameters)))
 
 (defn- format-css-selectors [monitor]
   (let [css-selector-keys
@@ -210,7 +204,6 @@
             (missing-setting-updates config-settings)
             bool-to-coll-updates
             string-or-map-to-vector-updates
-            get-first-url-if-continuous
             string-vector-to-set-updates
             report-first-rss-updates
             remove-irrelevant-details-updates

@@ -1,0 +1,33 @@
+WEB-MONITOR - Universal Web Scraper with Notifications
+
+DESCRIPTION
+  web-monitor scrapes websites for recurring elements (articles, products, etc.)
+  and notifies you of new or changed content via Matrix, RSS, stdout, or custom scripts.
+
+USAGE
+  Run with a config.json file defining monitors and settings.
+
+FLAGS
+  --help, -h          Show this help message
+  --version, -v       Show version info
+  --once, -o          Run monitoring once; supports:
+    --path, -p        Specify config file path
+    --json, -j        Provide config as JSON string directly
+
+PROJECT FILES
+  config.json         Configuration file (see README for details)
+  data/               Database, RSS feeds, and logs
+  user/               User scripts (filters, notifications, URL lists)
+
+CONFIGURATION HIGHLIGHTS
+  - frequency: scrape interval (e.g., "12m 10s")
+  - browser: "none", "firefox", or "chrome" (for JS rendering)
+  - messengers: specify notification channels (matrix, rss, print, notify-send, or custom scripts)
+  - monitors: define targets, selectors, filters, and scrape behavior
+
+NOTES
+  - Java 11 required; Firefox/Chrome + compatible driver needed for JS-heavy sites.
+  - Config changes may reset monitored data to avoid false notifications.
+  - Detailed docs available in README.md and online.
+
+For full documentation, visit the project repository or use the README file.

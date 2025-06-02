@@ -11,64 +11,52 @@
   (ad/create-db))
 
 (defn- remove-namespaces [db-monitors]
-  (map (fn [db-monitor]
-         (into {} (for [[k v] db-monitor]
-                    [(keyword (name k)) v])))
-       db-monitors))
+  (mapv
+   (fn [db-monitor]
+     (reduce-kv (fn [m k v]
+                  (assoc m (keyword (name k)) v))
+                {}
+                db-monitor))
+   db-monitors))
 
 (defn- get-content-selectors-hash [monitor]
-  (let [content-selector-keys
-        [:javascript :url :url-range :url-file :css-selector :inner-css-selector
-         :web-operations :filters :text-css-selectors :href-css-selectors]
-        selector-vector
-        (filter #(not-empty %)
-                (for [k content-selector-keys]
-                  (if (not (nil? (k monitor)))
-                    [k (k monitor)]
-                    [])))
-        selector-map
-        (if (not-empty selector-vector)
-          (into {} selector-vector)
-          {})]
-    (letfn [(canonicalize [data]
-              (cond
-                (map? data)
-                (into (sorted-map)
-                      (into {} (map (fn [[k v]] [k (canonicalize v)]) data)))
-                (coll? data)
-                (map canonicalize data)
-                :else
-                data))]
-      (-> selector-map
-          canonicalize
-          pr-str
-          hash/md5
-          codecs/bytes->hex
-          (subs 0 16)))))
+  (-> monitor
+      (select-keys [:javascript
+                    :url
+                    :url-range
+                    :url-file
+                    :css-selector
+                    :inner-css-selector
+                    :web-operations
+                    :filters
+                    :text-css-selectors
+                    :href-css-selectors])
+      pr-str
+      hash/md5
+      codecs/bytes->hex
+      (subs 0 16)))
 
 (defn find-modified-monitors [config-monitors]
   (let [db-monitors (remove-namespaces (ad/get-all-web-monitors))]
-    (filter #(let [matching-db-monitor
-                   (first
-                    (sf/get-maps-with-values db-monitors :name [(:name %)]))
-                   matching-db-monitor-selector-hash
-                   (:content_selectors_hash matching-db-monitor)
-                   config-monitor-content-selectors-hash
-                   (get-content-selectors-hash %)]
-               (and (not (nil? matching-db-monitor-selector-hash))
-                    (not= config-monitor-content-selectors-hash
-                          matching-db-monitor-selector-hash)))
-            config-monitors)))
+    (filter
+     #(let [matching-db-monitor
+            (first (sf/get-maps-with-values db-monitors :name [(:name %)]))
+            matching-db-monitor-selector-hash
+            (:content_selectors_hash matching-db-monitor)
+            config-monitor-content-selectors-hash
+            (get-content-selectors-hash %)]
+        (and (not (nil? matching-db-monitor-selector-hash))
+             (not= config-monitor-content-selectors-hash
+                   matching-db-monitor-selector-hash)))
+     config-monitors)))
 
 (defn- select-monitor-by-name [monitor-maps monitor-name]
   (first (filter #(= (:name %) monitor-name) monitor-maps)))
 
 (defn- get-updated-monitors [monitor-names-in-both config-monitors db-monitors]
-  (letfn [(format-db-monitor
-            [monitor]
+  (letfn [(format-db-monitor [monitor]
             (assoc monitor :active (= 1 (:active monitor))))
-          (get-activity-updates
-            [config-monitor db-monitor]
+          (get-activity-updates [config-monitor db-monitor]
             (cond
               (and (not (:active config-monitor))
                    (:active db-monitor))
@@ -78,34 +66,30 @@
               [:active 1]
               :else
               []))
-          (get-content-selector-updates
-            [config-monitor db-monitor]
+          (get-content-selector-updates [config-monitor db-monitor]
             (let [content-selectors-hash
                   (get-content-selectors-hash config-monitor)]
               (if-not (= content-selectors-hash
                          (:content_selectors_hash db-monitor))
                 [:content_selectors_hash content-selectors-hash]
                 [])))]
-    (filter #(not-empty %)
-            (for [monitor-name monitor-names-in-both]
-              (let [selected-config-monitor
-                    (select-monitor-by-name config-monitors monitor-name)
-                    selected-db-monitor
-                    (format-db-monitor
-                     (select-monitor-by-name db-monitors monitor-name))
-                    activity-updates
-                    (get-activity-updates selected-config-monitor
-                                          selected-db-monitor)
-                    content-selector-updates
-                    (get-content-selector-updates selected-config-monitor
-                                                  selected-db-monitor)
-                    combined-updates
-                    (flatten [activity-updates content-selector-updates])]
-                (if-not (empty? combined-updates)
-                  (apply assoc {:name monitor-name} combined-updates)
-                  {}))))))
+    (keep (fn [monitor-name]
+            (let [config-monitor
+                  (select-monitor-by-name config-monitors monitor-name)
+                  db-monitor
+                  (format-db-monitor
+                   (select-monitor-by-name db-monitors monitor-name))
+                  activity-updates
+                  (get-activity-updates config-monitor db-monitor)
+                  content-selector-updates
+                  (get-content-selector-updates config-monitor db-monitor)
+                  combined-updates
+                  (concat activity-updates content-selector-updates)]
+              (when (seq combined-updates)
+                (apply assoc {:name monitor-name} combined-updates))))
+          monitor-names-in-both)))
 
-(defn update-db-monitors [config-monitors]
+(defn- get-new-monitors-and-updates [config-monitors]
   (let [db-monitors
         (remove-namespaces (ad/get-all-web-monitors))
         config-monitor-names
@@ -123,42 +107,52 @@
         new-monitors
         (map #(select-monitor-by-name config-monitors %) new-monitor-names)
         monitor-updates
-        (get-updated-monitors existing-monitor-names config-monitors
-                              db-monitors)]
+        (get-updated-monitors
+         existing-monitor-names config-monitors db-monitors)]
+    {:db-monitors           db-monitors
+     :deleted-monitor-names deleted-monitor-names
+     :new-monitors          new-monitors
+     :monitor-updates       monitor-updates}))
+
+(defn update-db-monitors [config-monitors]
+  (let [{:keys [db-monitors deleted-monitor-names new-monitors monitor-updates]}
+        (get-new-monitors-and-updates config-monitors)]
     (doseq [n new-monitors]
       (ad/insert-web-monitor
        {:name                   (:name n)
         :active                 (if (:active n) 1 0)
-        :datetime               (t/make-datetime)
+        :first_defined          (t/make-datetime)
         :content_selectors_hash (get-content-selectors-hash n)}))
     (doseq [u monitor-updates]
-      (let [db-monitor
-            (select-monitor-by-name db-monitors (:name u))
-            [u-added-content-selectors
-             has-new-content-selectors]
-            (if (nil? (:content_selectors_hash u))
-              [(assoc u
-                      :content_selectors_hash
-                      (:content_selectors_hash db-monitor))
-               false]
-              [u
-               true])
-            u-added-active-status
-            (if (nil? (:active u))
-              (assoc u-added-content-selectors :active (:active db-monitor))
-              u-added-content-selectors)]
+      (let [monitor-name
+            (:name u)
+            db-monitor
+            (select-monitor-by-name db-monitors monitor-name)
+            [content-selectors-hash has-new-content-selectors]
+            (if (contains? u :content_selectors_hash)
+              [(:content_selectors_hash u)          true]
+              [(:content_selectors_hash db-monitor) false])
+            active-status
+            (if (contains? u :active)
+              (:active u)
+              (:active db-monitor))
+            monitor-update-map
+            [{:content_selectors_hash content-selectors-hash
+              :active                 active-status}
+             {:name                   monitor-name}]]
         (when has-new-content-selectors
-          (ad/delete-web-elements (:name u))
-          (af/delete-rss-feed     (:name u)))
-        (ad/update-web-monitor u-added-active-status)))
+          (ad/delete-web-elements {:monitor_name monitor-name})
+          (af/delete-rss-feed     monitor-name))
+        (ad/update-web-monitor monitor-update-map)))
     (doseq [d deleted-monitor-names]
-      ((ad/delete-web-monitor  d)
-       (ad/delete-web-elements d)
+      ((ad/delete-web-monitor  {:name d})
+       (ad/delete-web-elements {:monitor_name d})
        (af/delete-rss-feed     d)))))
 
 (defn get-web-contents-db [monitor]
   (let [web-elements
-        (remove-namespaces (ad/get-web-elements (:name monitor)))
+        (remove-namespaces
+         (ad/get-web-elements {:monitor_name (:name monitor)}))
         converted-web-elements
         (map #(dissoc
                (assoc % :not-seen-since (:not_seen_since %))
@@ -169,39 +163,31 @@
         {existing-web-elements true
          removed-web-elements false}
         (group-by #(nil? (:not-seen-since %))
-                  converted-web-elements-without-filtered)
-        web-elements-text-and-hrefs
-        (map (fn [web-elements]
-               (map #(select-keys % [:text :hrefs]) web-elements))
-             [converted-web-elements
-              existing-web-elements
-              removed-web-elements])]
-    {:all      (nth web-elements-text-and-hrefs 0)
-     :existing (nth web-elements-text-and-hrefs 1)
-     :removed  (nth web-elements-text-and-hrefs 2)}))
+                  converted-web-elements-without-filtered)]
+    (reduce (fn [reduced-elements-map [elements-type web-elements]]
+              (assoc reduced-elements-map
+                     elements-type
+                     (map #(select-keys % [:text :hrefs]) web-elements)))
+            {}
+            {:all      converted-web-elements
+             :existing existing-web-elements
+             :removed  removed-web-elements})))
 
 (defn save-web-elements [elements-type web-elements]
-  (let [elements-datetime
-        (:datetime (first web-elements))
-        not-seen-since
-        (elements-type {:removed elements-datetime})
-        filtered-by-href-filter
-        (elements-type {:new 0 :filtered-out 1})
-        make-new-db-web-element
-        (fn [web-element]
-          (assoc
-           (select-keys web-element [:monitor-name :text :hrefs :datetime])
-           :filtered-out filtered-by-href-filter))
-        make-update-db-web-element
-        (fn [web-element]
-          (assoc
-           (select-keys web-element [:monitor-name :text :hrefs])
-           :not-seen-since not-seen-since))
-        [db-function make-web-element-function]
-        (cond
-          (elements-type {:new true :filtered-out true})
-          [ad/insert-web-element make-new-db-web-element]
-          (elements-type {:removed true :rediscovered true})
-          [ad/update-not-seen-since make-update-db-web-element])]
-    (doseq [web-element web-elements]
-      (db-function (make-web-element-function web-element)))))
+  (cond
+    (elements-type {:new true :filtered-out true})
+    (let [filtered-by-href-filter (elements-type {:new 0 :filtered-out 1})]
+      (doseq [web-element web-elements]
+        (ad/insert-web-element
+         (assoc (select-keys web-element [:text :hrefs])
+                :filtered_out   filtered-by-href-filter
+                :monitor_name   (:monitor-name web-element)
+                :not_seen_since (:datetime     web-element)))))
+    (elements-type {:removed true :rediscovered true})
+    (let [elements-datetime (:datetime (first web-elements))
+          not-seen-since    (elements-type {:removed elements-datetime})]
+      (doseq [web-element web-elements]
+        (ad/update-not-seen-since
+         [{:not_seen_since not-seen-since}
+          (assoc (select-keys web-element [:text :hrefs])
+                 :monitor_name (:monitor-name web-element))])))))

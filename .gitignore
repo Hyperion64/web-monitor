@@ -13,19 +13,10 @@ pom.xml.asc
 .hgignore
 .hg/
 .lein-failures
-
-# Ignore build artifacts
-/target
-
-# Ignore Git
 /.git
-
-# Ignore IDE/editor configuration files
-/.clj-kondo
 /.lsp
-
-# Ignore Leiningen REPL history
 /.lein-repl-history
+/.clj-kondo
 
 # Ignore config.json
 #/config.json

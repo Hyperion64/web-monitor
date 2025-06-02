@@ -9,26 +9,25 @@
             [hickory.select         :as sel]))
 
 (defn- parse-html-content [css-selector html-content]
-  (if-not (or (nil? css-selector) (empty? css-selector))
-    (let [hickory-select-functions
-          (flatten (for [[k f]
-                         {:tag     sel/tag
-                          :classes #(map sel/class %)
-                          :ids     #(map sel/id %)
-                          :type    sel/node-type}
-                         :let  [selector (k css-selector)]
-                         :when (some? selector)]
-                     (f selector)))]
-      (sel/select (apply sel/and hickory-select-functions)
-                  html-content))
-    html-content))
+  (let [hickory-select-functions
+        (mapcat
+         (fn [[k f]]
+           (when-let [selector (k css-selector)]
+             (let [result (f selector)]
+               (if (#{:tag :type} k)
+                 [result]
+                 result))))
+         {:tag     sel/tag
+          :classes #(map sel/class %)
+          :ids     #(map sel/id %)
+          :type    sel/node-type})]
+    (sel/select (apply sel/and hickory-select-functions) html-content)))
 
 (defn- wrap-and-select-html-content [html-content monitor selector-key]
-  {:content (if-not (empty? (selector-key monitor))
-              (flatten
-               (map #(first (parse-html-content % html-content))
-                    (selector-key monitor)))
-              [html-content])})
+  (let [selectors (selector-key monitor)]
+    {:content (if (seq selectors)
+                (mapv #(first (parse-html-content % html-content)) selectors)
+                [html-content])}))
 
 (defn- text-extraction [html-content monitor]
   (letfn [(extract-content [parsed-html-content]
@@ -310,10 +309,3 @@
         (fn [html-content _]
           (sf/make-json-string (:text html-content)))]
     (perform-filtering-core web-contents filter-functions get-text)))
-
-(defn process-parsed-html [parsed-html monitor]
-  (-> parsed-html
-      (perform-selected-filtering monitor)
-      (initialize-extraction monitor)
-      (perform-general-filtering (:filters monitor))
-      distinct))

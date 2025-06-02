@@ -26,10 +26,32 @@ Receive said notifications via matrix, rss, std output, pipe it into your own sc
   - log_files: For each session that produces a warning or error, a .log file is created. Each log entry follows the format:
   `[timestamp in format yyyy-MM-dd HH:mm:ss] [monitor name] [WARNING or ERROR] content`
 
-* resources:
+* user:
   - filter_stripts: script to filter scraped data.
   - notification_scripts: script to pass scraped data to.
   - url_files: list of urls to scrape for a given monitor.
+
+### Flags
+Web-monitor supports the following optional flags:
+
+- `--help` / `-h`:  
+  Displays a help message similar to this README.
+
+- `--version` / `-v`:  
+  Displays the current version of web-monitor.
+
+- `--once` / `-o`:  
+  Runs web-monitor a single time, independent of the database.  
+  Found results will not be saved, and all matches will be printed, regardless of prior appearances in the database.  
+  This mode supports the following additional flags, which can also be directly appended to `-o` (e.g. `-op`, `-oj`):
+
+  - `--path` / `-p`:  
+    Specifies that the config file should be read from a given path.  
+    The path must be provided as the next argument.
+
+  - `--json` / `-j`:  
+    Specifies that the entire config is passed directly as a JSON string  
+    (wrapped in quotes) in the next argument.
 
 ### Setting up config.json:
 The config.json file contains the following 3 JSON objects:
@@ -40,6 +62,7 @@ The config.json file contains the following 3 JSON objects:
   - "rss-port": sets port for rss feeds.
   - "browser": sets the browser used for scraping. "none" is the default. The other options are "firefox" and "chrome" if javascript should be loaded. Note that loading the js is by far the most resource intensive part in this program and could slow down already very busy and slow computers significantly for high frequency scrapes. Also note the dependencies in **Installation**.
   - "js-load-time-seconds": set how long the js has time to load for each scraping, defaults to 2.
+  - "regular-monitors-asynchronous": boolean that determines whether regular (non-continuous) monitors should run concurrently. When true, multiple monitors may execute in parallel, which can be demanding on weaker machines when loading JavaScript. Set to false to run monitors sequentially and reduce system load.
   - "messengers":
     - "matrix"
     - "rss": "rss" will automatically create an rss feed which you can use. Just provide a link like: http://localhost:8080/Example-monitor-name.xml to your rss reader with the localhost number being the port number specified in the settings. The rss file will be deleted if the monitor is removed from the config or if the details for the extraction of the monitor have changed but if rss is still defined as a messenger, it will just be replaced of course. It is not being deleted if it is merely deactivated.

@@ -4,10 +4,12 @@
 
 (def continuous-monitor-states (atom {}))
 
+(def regular-monitor-states (atom {}))
+
 (defn- monitor-to-states-key [monitor]
   (keyword (:name monitor)))
 
-(defn manage-active-monitors [continuous-monitors]
+(defn manage-continuous-active-monitors [continuous-monitors]
   (let [running-monitor-keys
         (set (keys @continuous-monitor-states))
         active-monitor-keys
@@ -44,7 +46,7 @@
           "confirm-restart"    [assoc  "restart-confirmed"])]
     (swap! continuous-monitor-states assoc-or-dissoc monitor-key state)))
 
-(defn initialize-monitor-states
+(defn initialize-continuous-monitor-states
   [monitors-to-start monitors-to-stop monitors-to-restart]
   (doseq [[monitors action]
           [[monitors-to-start   "initialize-start"]
@@ -52,5 +54,16 @@
            [monitors-to-restart "initialize-restart"]]]
     (run! #(modify-continuous-monitor-states % action) monitors)))
 
-(defn request-monitor-state [monitor]
+(defn request-continuous-monitor-state [monitor]
   ((monitor-to-states-key monitor) @continuous-monitor-states))
+
+(defn modify-regular-monitor-state [monitor operation]
+  (let [monitor-key (monitor-to-states-key monitor)]
+    (case operation
+      "start"
+      (swap! regular-monitor-states assoc monitor-key "active")
+      "stop"
+      (swap! regular-monitor-states dissoc monitor-key))))
+
+(defn request-regular-monitor-state [monitor]
+  ((monitor-to-states-key monitor) @regular-monitor-states))

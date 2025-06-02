@@ -12,7 +12,8 @@
         ],
         "report-first-found": [
             "print"
-        ]
+        ],
+        "regular-monitors-asynchronous": true
     },
     "account-details": {
         "matrix": {
@@ -138,16 +139,10 @@
                 {
                     "type": "scroll",
                     "scrolls": 0
-                }
-            ],
-            "filters": [
+                },
                 {
-                    "operator": "!contains",
-                    "filter-value": "AE_",
-                    "text-css-selector": {
-                        "tag": "dd",
-                        "classes": "release-title"
-                    }
+                    "type": "wait",
+                    "time": 4
                 }
             ],
             "text-css-selectors": {
@@ -187,6 +182,16 @@
                 {
                     "type": "scroll",
                     "scrolls": 0
+                }
+            ],
+            "filters": [
+                {
+                    "operator": "!contains",
+                    "filter-value": "AE_",
+                    "text-css-selector": {
+                        "tag": "dd",
+                        "classes": "release-title"
+                    }
                 }
             ],
             "text-css-selectors": {

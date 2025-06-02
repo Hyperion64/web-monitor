@@ -92,8 +92,10 @@
                      (:url monitor)))
                (manage-iterate-monitoring-url-range)))))
 
-(defn manage-continuous-scrape
-  [driver monitor previous-html previous-web-contents]
+(defn manage-continuous-scrape [driver
+                                monitor
+                                previous-html
+                                previous-web-contents]
   (let [html
         (initialize-continuous-scrape driver monitor)
         html-is-new

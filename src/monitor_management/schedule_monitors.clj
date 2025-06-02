@@ -79,16 +79,21 @@
         (get-ready-monitors clock-maps-new-monitor-update monitors)]
     [clock-maps-countdown-reset-update ready-monitors time-advance]))
 
-(defn- get-settings-for-monitoring-core [config]
-  {:config-monitors (:monitors config)
-   :settings        (:settings config)
-   :account-details (:account-details config)})
-
-(defn- prepare-regular-monitor-schedule [monitors settings previous-clock-maps]
-  (let [config-monitors
+(defn- get-active-config-monitors [config]
+  (let [{:keys [monitors settings]}
+        config
+        config-monitors
         (pm/format-config-monitors monitors settings)
         active-config-monitors
-        (filter #(:active %) config-monitors)
+        (filter #(:active %) config-monitors)]
+    [active-config-monitors config-monitors]))
+
+(defn get-monitor-once-monitors [config]
+  (first (get-active-config-monitors config)))
+
+(defn- prepare-regular-monitor-schedule [config previous-clock-maps]
+  (let [[active-config-monitors config-monitors]
+        (get-active-config-monitors config)
         {continuous-monitors true, regular-monitors false}
         (group-by #(:continuous %) active-config-monitors)
         [updated-clock-maps ready-regular-monitors wait-time]
@@ -104,10 +109,9 @@
 
 (defn- prepare-continuous-monitor-schedule [continuous-monitors]
   (let [[monitors-to-start monitors-to-stop]
-        (ams/manage-active-monitors continuous-monitors)
+        (ams/manage-continuous-active-monitors continuous-monitors)
         running-continuous-monitors
-        (vec (set/difference (set continuous-monitors)
-                             (set monitors-to-start)))
+        (vec (set/difference (set continuous-monitors) (set monitors-to-start)))
         monitors-to-restart
         (adl/find-modified-monitors running-continuous-monitors)]
     {:continuous-monitors-to-start   monitors-to-start
@@ -115,23 +119,21 @@
      :continuous-monitors-to-restart monitors-to-restart}))
 
 (defn prepare-monitor-schedule [config previous-clock-maps]
-  (let [{:keys [config-monitors
-                settings
-                account-details]}
-        (get-settings-for-monitoring-core config)
+  (let [{:keys [account-details regular-monitors-asynchronous]}
+        config
         {:keys [wait-time
                 updated-clock-maps
                 parsed-config-monitors
                 continuous-monitors
                 ready-regular-monitors
                 regular-monitors]}
-        (prepare-regular-monitor-schedule
-         config-monitors settings previous-clock-maps)
+        (prepare-regular-monitor-schedule config previous-clock-maps)
         {:keys [continuous-monitors-to-start
                 continuous-monitors-to-stop
                 continuous-monitors-to-restart]}
         (prepare-continuous-monitor-schedule continuous-monitors)]
     {:account-details                account-details
+     :regular-monitors-asynchronous  regular-monitors-asynchronous
      :wait-time                      wait-time
      :updated-clock-maps             updated-clock-maps
      :parsed-config-monitors         parsed-config-monitors
@@ -145,8 +147,10 @@
 (defn pause-core-loop [wait-time regular-monitors continuous-monitors]
   (Thread/sleep
    (letfn [(no-regular-monitor-wait-time [continuous-monitors]
-             (let [frequencies (map #(:frequency %) continuous-monitors)
-                   minimum-frequency (- (apply min frequencies) 1000)]
+             (let [frequencies
+                   (map #(:frequency %) continuous-monitors)
+                   minimum-frequency
+                   (- (apply min frequencies) 1000)]
                (if (<= minimum-frequency ten-minutes-ms)
                  minimum-frequency
                  ten-minutes-ms)))]

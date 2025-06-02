@@ -7,24 +7,23 @@
             [utils.timestamps                        :as t]))
 
 (defn- transform-to-output-format [all-web-contents monitor]
-  (let [monitor-name (:name monitor)
-        datetime (t/make-datetime)
+  (let [monitor-name     (:name monitor)
+        datetime         (t/make-datetime)
         first-monitoring (empty? (:all-db all-web-contents))]
-    (reduce
-     (fn [reduced-contents [type-key web-contents]]
-       (let [type (name type-key)]
-         (assoc reduced-contents
-                type-key
-                (map (fn [web-content]
-                       {:monitor-name     monitor-name
-                        :text             (or (:text web-content) "")
-                        :hrefs            (:hrefs web-content)
-                        :datetime         datetime
-                        :first-monitoring first-monitoring
-                        :type             type})
-                     web-contents))))
-     {}
-     (dissoc all-web-contents :all-db))))
+    (reduce (fn [reduced-contents [type-key web-contents]]
+              (let [type (name type-key)]
+                (assoc reduced-contents
+                       type-key
+                       (map (fn [web-content]
+                              {:monitor-name     monitor-name
+                               :text             (or (:text web-content) "")
+                               :hrefs            (:hrefs web-content)
+                               :datetime         datetime
+                               :first-monitoring first-monitoring
+                               :type             type})
+                            web-contents))))
+            {}
+            (dissoc all-web-contents :all-db))))
 
 (defn- manage-notify-user [web-elements-list monitor account-details]
   (let [web-elements-with-href-content
@@ -82,26 +81,37 @@
            :new          filtered-new-web-contents
            :filtered-out filtered-out-new-web-contents)))
 
-(defn- manage-process-web-contents [web-contents monitor config-account-details]
-  (-> monitor
-      adl/get-web-contents-db
-      (sort-web-contents web-contents)
-      (manage-post-processing-filtering monitor)
-      (transform-to-output-format monitor)
-      (doto
-       (#(doseq [[type web-elements] %]
-           (adl/save-web-elements type web-elements)))
-        (manage-notify-user monitor config-account-details))))
+(defn- manage-process-web-contents [web-contents
+                                    monitor
+                                    config-account-details
+                                    mode]
+  (let [is-looping      (= mode "looping")
+        web-contents-db (if is-looping
+                          (adl/get-web-contents-db monitor)
+                          {:all [] :existing [] :removed []})]
+    (-> web-contents-db
+        (sort-web-contents                web-contents)
+        (manage-post-processing-filtering monitor)
+        (transform-to-output-format       monitor)
+        (doto
+         (#(when is-looping
+             (doseq [[type web-elements] %]
+               (adl/save-web-elements type web-elements))))
+          (manage-notify-user monitor config-account-details)))))
 
-(defn- initialize-regular-monitor [monitor config-account-details]
+(defn- initialize-regular-monitor [monitor config-account-details mode]
   (-> monitor
       sl/manage-regular-scrape
-      (manage-process-web-contents monitor config-account-details)))
+      (manage-process-web-contents monitor config-account-details mode)))
 
-(defn- continuous-monitor-loop [monitor driver config-account-details frequency
-                                previous-html previous-web-contents]
+(defn- continuous-monitor-loop [monitor
+                                driver
+                                config-account-details
+                                frequency
+                                previous-html
+                                previous-web-contents]
   (let [[monitor-state-modification iterate-again]
-        (case (ams/request-monitor-state monitor)
+        (case (ams/request-continuous-monitor-state monitor)
           "active"                        [nil               true]
           "awaiting-start-confirmation"   ["confirm-start"   true]
           "awaiting-stop-confirmation"    ["confirm-stop"    false]
@@ -117,7 +127,7 @@
           (do
             (when web-contents-are-new
               (manage-process-web-contents
-               web-contents monitor config-account-details))
+               web-contents monitor config-account-details "looping"))
             (Thread/sleep frequency)
             (recur monitor driver config-account-details frequency html
                    web-contents))
@@ -128,16 +138,33 @@
       (sl/quit-driver driver))))
 
 (defn- initialize-continuous-monitor [monitor config-account-details]
-  (let [{:keys [frequency url js-load-time-seconds browser web-operations]}
-        monitor
+  (let [adjusted-monitor
+        (update monitor :url first)
+        {:keys [frequency url js-load-time-seconds browser web-operations]}
+        adjusted-monitor
         driver
-        (sl/create-driver url js-load-time-seconds browser web-operations)]
-    (future (continuous-monitor-loop
-             monitor driver config-account-details frequency "" []))))
+        (sl/create-driver
+         url js-load-time-seconds browser web-operations)]
+    (continuous-monitor-loop
+     adjusted-monitor driver config-account-details frequency "" [])))
 
-(defn initialize-monitors
-  [regular-monitors continuous-monitors config-account-details]
+(defn initialize-monitors [regular-monitors
+                           continuous-monitors
+                           config-account-details
+                           regular-monitors-asynchronous
+                           mode]
   (doseq [continuous-monitor continuous-monitors]
-    (initialize-continuous-monitor continuous-monitor config-account-details))
-  (doseq [regular-monitor regular-monitors]
-    (initialize-regular-monitor regular-monitor config-account-details)))
+    (future (initialize-continuous-monitor
+             continuous-monitor config-account-details)))
+  (if regular-monitors-asynchronous
+    (doseq [regular-monitor regular-monitors]
+      (future
+        (when (not= (ams/request-regular-monitor-state regular-monitor)
+                    "active")
+          (ams/modify-regular-monitor-state regular-monitor "start")
+          (initialize-regular-monitor
+           regular-monitor config-account-details mode)
+          (ams/modify-regular-monitor-state regular-monitor "stop"))))
+    (doseq [regular-monitor regular-monitors]
+      (initialize-regular-monitor
+       regular-monitor config-account-details mode))))

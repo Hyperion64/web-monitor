@@ -38,10 +38,19 @@
   (str root-path path-end))
 
 ;config
-(defn get-config []
-  (let [config-path (get-file-path "/config.json")]
-    (with-open [reader (io/reader config-path)]
-      (json/read reader :key-fn keyword))))
+(defn- get-config [config-path]
+  (with-open [reader (io/reader config-path)]
+    (json/read reader :key-fn keyword)))
+
+(defn get-regular-config []
+  (get-config (get-file-path "/config.json")))
+
+(defn get-config-from-path [path]
+  (get-config path))
+
+;resources
+(defn get-help-output []
+  (slurp (get-file-path "/resources/cli_output/help.txt")))
 
 ;rss
 (defn get-rss-feed-path [monitor-name]
@@ -63,15 +72,15 @@
 (defn get-db-file-path []
   (get-file-path "/data/db/web-monitor.db"))
 
-;resources
+;user
 (defn get-notification-script-path [message-script-name]
-  (get-file-path (str "/resources/notification_scripts/" message-script-name)))
+  (get-file-path (str "/user/notification_scripts/" message-script-name)))
 
 (defn get-filter-script-path [filter-script-name]
-  (get-file-path (str "/resources/filter_scripts/" filter-script-name)))
+  (get-file-path (str "/user/filter_scripts/" filter-script-name)))
 
 (defn- get-url-files-path [url-file-name]
-  (get-file-path (str "/resources/url_files/" url-file-name)))
+  (get-file-path (str "/user/url_files/" url-file-name)))
 
 (defn read-in-url-file [url-file-name]
   (with-open [reader (io/reader (get-url-files-path url-file-name))]
